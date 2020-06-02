@@ -501,7 +501,7 @@ static int aspeed_spi_controller_init(struct aspeed_spi_priv *priv)
 					debug("cs0 mem-map : %x \n", (u32)flash->ahb_base);
 					break;
 				case 1:
-					flash->ahb_base = priv->flashes[0].ahb_base + 0x7100000;	//cs0 + 128Mb : use 64MB
+					flash->ahb_base = priv->flashes[0].ahb_base + 0x8000000;	//cs0 + 128Mb : use 64MB
 					debug("cs1 mem-map : %x end %x \n", (u32)flash->ahb_base, (u32)flash->ahb_base + 0x4000000);
 					addr_config = G6_SEGMENT_ADDR_VALUE((u32)flash->ahb_base, (u32)flash->ahb_base + 0x4000000); //add 512Mb
 					writel(addr_config, &priv->regs->segment_addr[cs]);
