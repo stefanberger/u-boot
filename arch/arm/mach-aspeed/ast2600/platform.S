@@ -189,12 +189,6 @@ wait_lock:
 	str	r1, [r0]
 
 1:
-	/* release display port reset */
-	ldr	r0, =AST_SCU_SYSRST_CTRL_CLR
-	movw	r1, #0x0000
-	movt	r1, #0x3000
-	str	r1, [r0]
-
 	/* MMIO decode setting */
 	ldr	r0, =AST_SCU_MMIO_DEC_SET
 	mov	r1, #0x2000
