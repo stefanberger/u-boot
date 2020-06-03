@@ -294,3 +294,7 @@
 &ehci1 {
 	status = "okay";
 };
+
+&display_port {
+	status = "okay";
+};
