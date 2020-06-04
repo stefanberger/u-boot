@@ -28,7 +28,7 @@ int do_boots(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	if (aspeed_bl2_verify(sb_hdr, sb_hdr + 1, sb_hdr) != 0)
 		return -EPERM;
 
-	sprintf(argv[0], "%x", CONFIG_ASPEED_KERNEL_FIT_DRAM_BASE + sizeof(*sb_hdr));
+	sprintf(argv[0], "%x", CONFIG_ASPEED_KERNEL_FIT_DRAM_BASE);
 
 	return do_bootm_states(cmdtp, flag, argc, argv, BOOTM_STATE_START |
 		BOOTM_STATE_FINDOS | BOOTM_STATE_FINDOTHER |
