@@ -30,7 +30,7 @@ static int aspeed_secboot_spl_ram_load_image(struct spl_image_info *spl_image,
 		(struct aspeed_secboot_header *)CONFIG_ASPEED_UBOOT_DRAM_BASE - 1;
 
 	memcpy(sb_hdr, (void *)(CONFIG_ASPEED_UBOOT_SPI_BASE), CONFIG_ASPEED_UBOOT_SPI_SIZE);
-	if (aspeed_bl2_verify(sb_hdr, sb_hdr + 1, CONFIG_SPL_TEXT_BASE) != 0)
+	if (aspeed_bl2_verify(sb_hdr, CONFIG_SPL_TEXT_BASE) != 0)
 		return -EPERM;
 
 	spl_image->os = IH_OS_U_BOOT;
@@ -131,7 +131,7 @@ static int aspeed_secboot_spl_mmc_load_image(struct spl_image_info *spl_image,
 	}
 
 	bd = mmc_get_blk_desc(mmc);
-	if (sizeof(sb_hdr) != bd->blksz) {
+	if (sizeof(*sb_hdr) != bd->blksz) {
 		printf("spl: secure boot header size must equal to mmc block size\n");
 		return -EINVAL;
 	}
@@ -143,7 +143,7 @@ static int aspeed_secboot_spl_mmc_load_image(struct spl_image_info *spl_image,
 		return -EIO;
 	}
 
-	if (aspeed_bl2_verify(sb_hdr, sb_hdr + 1, CONFIG_SPL_TEXT_BASE) != 0)
+	if (aspeed_bl2_verify(sb_hdr, CONFIG_SPL_TEXT_BASE) != 0)
 		return -EPERM;
 
 	spl_image->os = IH_OS_U_BOOT;
@@ -221,7 +221,7 @@ static int aspeed_secboot_spl_ymodem_load_image(struct spl_image_info *spl_image
 		goto end_stream;
 	}
 
-	if (aspeed_bl2_verify(sb_hdr, sb_hdr, CONFIG_SPL_TEXT_BASE) != 0)
+	if (aspeed_bl2_verify(sb_hdr, CONFIG_SPL_TEXT_BASE) != 0)
 		return -EPERM;
 
 	spl_image->os = IH_OS_U_BOOT;
