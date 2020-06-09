@@ -29,7 +29,7 @@
 
 struct aspeed_secboot_header {
 	u8 sbh_magic[16];
-	u32 sbh_cot_info;
+	u32 sbh_cot_alg;
 	u32 sbh_img_size;
 	u32 sbh_sig_off;
 	u32 sbh_cot_info_off;
@@ -56,6 +56,7 @@ struct aspeed_verify_info {
 	struct aspeed_secboot_header *sb_header;
 };
 
-extern int aspeed_bl2_verify(struct aspeed_secboot_header *aspeed_sbh, void *bl2_image, void *bl1_image);
+extern int aspeed_bl2_verify(void *bl2_image, void *bl1_image);
+extern int aspeed_verify_boot(void *cur_image, void *next_image);
 
 #endif /* #ifndef _ASPEED_VERIFY_H_ */
