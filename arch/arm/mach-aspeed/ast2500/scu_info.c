@@ -213,8 +213,11 @@ void aspeed_print_espi_mode(void)
 void aspeed_print_mac_info(void)
 {
 	int i;
-	printf("Eth :\n");
+	printf("Eth : ");
 	for (i = 0; i < ASPEED_MAC_COUNT; i++)
-		printf("    MAC%d: %s\n", i,
+		printf("MAC%d: %s, ", i,
 				aspeed_get_mac_phy_interface(i) ? "RGMII" : "RMII/NCSI");
+		if (i != (ASPEED_MAC_COUNT -1))
+			printf(", ");	
+	printf("\n");
 }
