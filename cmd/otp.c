@@ -277,10 +277,14 @@ static const struct otpstrap_info a1_strap_info[] = {
 	{ 5, 1, 1, "MAC 1 : RGMII" },
 	{ 6, 1, 0, "MAC 2 : RMII/NCSI" },
 	{ 6, 1, 1, "MAC 2 : RGMII" },
-	{ 7, 3, 0, "CPU Frequency : 1GHz" },
-	{ 7, 3, 1, "CPU Frequency : 800MHz" },
+	{ 7, 3, 0, "CPU Frequency : 1.2GHz" },
+	{ 7, 3, 1, "CPU Frequency : 1.6MHz" },
 	{ 7, 3, 2, "CPU Frequency : 1.2GHz" },
-	{ 7, 3, 3, "CPU Frequency : 1.4GHz" },
+	{ 7, 3, 3, "CPU Frequency : 1.6GHz" },
+	{ 7, 3, 4, "CPU Frequency : 800MHz" },
+	{ 7, 3, 5, "CPU Frequency : 800MHz" },
+	{ 7, 3, 6, "CPU Frequency : 800MHz" },
+	{ 7, 3, 7, "CPU Frequency : 800MHz" },
 	{ 10, 2, 0, "HCLK ratio AXI:AHB = 2:1" },
 	{ 10, 2, 1, "HCLK ratio AXI:AHB = 2:1" },
 	{ 10, 2, 2, "HCLK ratio AXI:AHB = 3:1" },
@@ -1267,8 +1271,8 @@ static int otp_print_strap_info(int view)
 				printf("0x%-5X", strap_status[bit_offset + j].value);
 				printf("%-9d", strap_status[bit_offset + j].remain_times);
 				if (info_cb.version != OTP_AST2600A0)
-					printf("0x%-10X", strap_status[bit_offset].reg_protected);
-				printf("0x%-7X", strap_status[bit_offset].protected);
+					printf("0x%-10X", strap_status[bit_offset + j].reg_protected);
+				printf("0x%-7X", strap_status[bit_offset + j].protected);
 				if (strap_info[i].value == OTP_REG_RESERVED) {
 					printf(" Reserved\n");
 					continue;
