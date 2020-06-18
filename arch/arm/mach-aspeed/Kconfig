@@ -30,6 +30,7 @@ config ASPEED_AST2600
 	select ARCH_SUPPORT_PSCI
 	select SYS_ARCH_TIMER
 	select SUPPORT_SPL
+	select ENABLE_ARM_SOC_BOOT0_HOOK
 	help
 	  The Aspeed AST2600 is a ARM-based SoC with Cortex-A7 CPU.
 	  It is used as Board Management Controller on many server boards,
