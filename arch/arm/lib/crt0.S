@@ -83,8 +83,8 @@ ENTRY(_main)
 	mov	r0, #0
 	bl	board_init_f
 
-#if ! defined(CONFIG_SPL_BUILD)
-
+#if (defined(CONFIG_SPL_BUILD) && !defined(CONFIG_TPL_BUILD) && !defined(CONFIG_SPL_SKIP_RELOCATE)) || \
+	!defined(CONFIG_SPL_BUILD)
 /*
  * Set up intermediate environment (new sp and gd) and call
  * relocate_code(addr_moni). Trick here is that we'll return
@@ -94,15 +94,22 @@ ENTRY(_main)
 	ldr	r0, [r9, #GD_START_ADDR_SP]	/* sp = gd->start_addr_sp */
 	bic	r0, r0, #7	/* 8-byte alignment for ABI compliance */
 	mov	sp, r0
+	ldr r9, [r9, #GD_NEW_GD]
+#if 0
 	ldr	r9, [r9, #GD_BD]		/* r9 = gd->bd */
 	sub	r9, r9, #GD_SIZE		/* new GD is below bd */
+#endif
 
 	adr	lr, here
 #ifdef CONFIG_POSITION_INDEPENDENT
 	adr	r0, _main
 	ldr	r1, _start_ofs
 	add	r0, r1
+#ifdef CONFIG_SPL_BUILD
+	ldr	r1, =CONFIG_SPL_TEXT_BASE
+#else
 	ldr	r1, =CONFIG_SYS_TEXT_BASE
+#endif
 	sub	r1, r0
 	add	lr, r1
 #endif
