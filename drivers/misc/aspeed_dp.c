@@ -65,6 +65,7 @@ static int aspeed_dp_probe(struct udevice *dev)
 	/* release DPMCU internal reset */
 	writel(0x10000010, 0x180100e0);
 	writel(0x10001110, 0x180100e0);
+	writel(0x00ff0000, 0x180100e8);
 
 	return 0;
 }
