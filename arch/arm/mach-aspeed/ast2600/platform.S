@@ -72,8 +72,8 @@
 
 .macro timer_init
 #ifdef CONFIG_FPGA_ASPEED
-	movw	r0, #0xF080
-	movt	r0, #0x2FA
+	movw	r0, #0xf080
+	movt	r0, #0x02fa
 #else
 	ldr	r0, =AST_SCU_REV_ID
 	ldr	r0, [r0]
@@ -81,10 +81,40 @@
 	ldr	r1, =REV_ID_AST2600A0
 	cmp	r0, r1
 
-	movweq 	r0, #0x32C0
+	beq	timer_init_a0
+
+	ldr	r1, =AST_SCU_HW_STRAP1
+	ldr	r1, [r1]
+	and	r1, #0x700
+	lsr	r1, #0x8
+
+	cmp	r1, #0x0
+	movweq	r0, #0x8c00
+	movteq	r0, #0x4786
+
+	cmp	r1, #0x1
+	movweq	r0, #0x1000
+	movteq	r0, #0x5f5e
+
+	cmp	r1, #0x2
+	movweq	r0, #0x8c00
+	movteq	r0, #0x4786
+
+	cmp	r1, #0x3
+	movweq	r0, #0x1000
+	movteq	r0, #0x5f5e
+
+	cmp	r1, #0x4
+	movwge	r0, #0x0800
+	movtge	r0, #0x2faf
+
+	b	timer_init_out
+
+timer_init_a0:
+	movweq 	r0, #0x32c0
 	movteq	r0, #0x4013
-	movwne	r0, #0x8C00
-	movtne	r0, #0x4786
+
+timer_init_out:
 #endif
 	mcr	p15, 0, r0, c14, c0, 0	@; update CNTFRQ
 .endm
