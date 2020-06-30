@@ -10,7 +10,6 @@
 _start:
 	ARM_VECTORS
 
-#ifdef CONFIG_SPL_BUILD
 	.word	0x0	/* Key location */
 	.word	0x0	/* start address of image */
 	.word	0Xfc00	/* image size 63KB*/
@@ -21,9 +20,5 @@ _start:
 	.word	0x0	/* checksum */
 	.word	0x0	/* BL2 secure header */
 	.word	0x0	/* public key or digest offset for BL2 */
-#else /* BL2 */
-	.word	0x0	/* image size */
-	.word	0x0	/* signature location */
-#endif
 
 #endif /* __BOOT0_H */
