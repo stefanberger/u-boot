@@ -104,19 +104,18 @@ extern u32 ast2600_get_pll_rate(struct ast2600_scu *scu, int pll_idx)
 	unsigned int mult, div = 1;
 
 	switch(pll_idx) {
-		case ASPEED_CLK_HPLL:	
+		case ASPEED_CLK_HPLL:
 			pll_reg = readl(&scu->h_pll_param);
 			break;
-		case ASPEED_CLK_MPLL:	
+		case ASPEED_CLK_MPLL:
 			pll_reg = readl(&scu->m_pll_param);
 			break;
-		case ASPEED_CLK_DPLL:	
+		case ASPEED_CLK_DPLL:
 			pll_reg = readl(&scu->d_pll_param);
 			break;		
-		case ASPEED_CLK_EPLL:	
+		case ASPEED_CLK_EPLL:
 			pll_reg = readl(&scu->e_pll_param);
 			break;
-
 	}
 	if (pll_reg & BIT(24)) {
 		/* Pass through mode */
@@ -125,11 +124,30 @@ extern u32 ast2600_get_pll_rate(struct ast2600_scu *scu, int pll_idx)
 		/* F = 25Mhz * [(M + 2) / (n + 1)] / (p + 1) */
 		union ast2600_pll_reg reg;
 		reg.w = pll_reg;
+		if(pll_idx == ASPEED_CLK_HPLL) {
+			/* 
+			HPLL Numerator (M) = fix 0x5F when SCU500[10]=1
+								 fix 0xBF when SCU500[10]=0 and SCU500[8]=1
+			SCU200[12:0] (default 0x8F) when SCU510[10]=0 and SCU510[8]=0 
+			HPLL Denumerator (N) =	SCU200[18:13] (default 0x2)
+			HPLL Divider (P)	 =  SCU200[22:19] (default 0x0)
+			HPLL Bandwidth Adj (NB) =  fix 0x2F when SCU500[10]=1
+									   fix 0x5F	when SCU500[10]=0 and SCU500[8]=1
+			SCU204[11:0] (default 0x31) when SCU500[10]=0 and SCU500[8]=0 
+			*/
+			u32 hwstrap1 = readl(&scu->hwstrap1.hwstrap);
+			if(hwstrap1 & BIT(10))
+				reg.b.m = 0x5F;
+			else {
+				if(hwstrap1 & BIT(8))
+					reg.b.m = 0xBF;
+				//otherwise keep default 0x8F
+			}
+		}
 		mult = (reg.b.m + 1) / (reg.b.n + 1);
 		div = (reg.b.p + 1);
 	}
 	return ((clkin * mult)/div);
-	
 }
 
 extern u32 ast2600_get_apll_rate(struct ast2600_scu *scu)
@@ -158,15 +176,11 @@ static u32 ast2600_a0_axi_ahb_div_table[] = {
 };
 
 static u32 ast2600_a1_axi_ahb_div0_table[] = {
-	3, 2, 3, 4,
+	0, 2, 3, 4,
 };
 
 static u32 ast2600_a1_axi_ahb_div1_table[] = {
-	3, 4, 6, 8,
-};
-
-static u32 ast2600_a1_axi_ahb_default_table[] = {
-	3, 4, 3, 4, 2, 2, 2, 2,
+	0, 4, 6, 8,
 };
 
 static u32 ast2600_get_hclk(struct ast2600_scu *scu)
@@ -178,17 +192,33 @@ static u32 ast2600_get_hclk(struct ast2600_scu *scu)
 	u32 rate = 0;
 
 	if (hw_rev & BIT(16)) {
-		if(hwstrap1 & BIT(16)) {
-			ast2600_a1_axi_ahb_div1_table[0] = ast2600_a1_axi_ahb_default_table[(hwstrap1 >> 8) & 0x3];
-			axi_div = 1;
-			ahb_div = ast2600_a1_axi_ahb_div1_table[(hwstrap1 >> 11) & 0x3];
+		//ast2600a1
+		if(hwstrap1 & (0x3 << 11)) {
+			if(hwstrap1 & BIT(16)) {
+				axi_div = 1;
+				ahb_div = ast2600_a1_axi_ahb_div1_table[(hwstrap1 >> 11) & 0x3];
+			} else {
+				axi_div = 2;
+				ahb_div = ast2600_a1_axi_ahb_div0_table[(hwstrap1 >> 11) & 0x3];
+			}
 		} else {
-			ast2600_a1_axi_ahb_div0_table[0] = ast2600_a1_axi_ahb_default_table[(hwstrap1 >> 8) & 0x3];
-			axi_div = 2;
-			ahb_div = ast2600_a1_axi_ahb_div0_table[(hwstrap1 >> 11) & 0x3];
+			if(hwstrap1 & BIT(16)) {
+				axi_div = 1;
+				ahb_div = ast2600_a1_axi_ahb_div1_table[(hwstrap1 >> 11) & 0x3];
+			} else {
+				axi_div = 2;
+				if(hwstrap1 & BIT(10)) 
+					ahb_div = 2;
+				else {
+					if(hwstrap1 & BIT(8))
+						ahb_div = 4;
+					else
+						ahb_div = 3;
+				}
+			}
 		}
 	} else {
-		//a0 : fix axi = hpll / 2		
+		//ast2600a0 : fix axi = hpll / 2		
 		axi_div = 2;
 		ahb_div = ast2600_a0_axi_ahb_div_table[(hwstrap1 >> 11) & 0x3];
 	}
