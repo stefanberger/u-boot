@@ -65,7 +65,10 @@ static int aspeed_dp_probe(struct udevice *dev)
 	/* release DPMCU internal reset */
 	writel(0x10000010, 0x180100e0);
 	writel(0x10001110, 0x180100e0);
+	//disable dp interrupt
 	writel(0x00ff0000, 0x180100e8);
+	//set vga ASTDP with DPMCU FW handling scratch
+	writel(readl(0x1e6e2100) | (0x7 << 9), 0x1e6e2100);	
 
 	return 0;
 }
