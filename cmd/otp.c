@@ -978,24 +978,46 @@ static uint32_t verify_dw(uint32_t otp_addr, uint32_t *value, uint32_t *ignore, 
 
 static void otp_soak(int soak)
 {
-	switch (soak) {
-	case 0: //default
-		otp_write(0x3000, 0x0); // Write MRA
-		otp_write(0x5000, 0x0); // Write MRB
-		otp_write(0x1000, 0x0); // Write MR
-		break;
-	case 1: //normal program
-		otp_write(0x3000, 0x4021); // Write MRA
-		otp_write(0x5000, 0x302f); // Write MRB
-		otp_write(0x1000, 0x4020); // Write MR
-		writel(0x04190760, OTP_TIMING);
-		break;
-	case 2: //soak program
-		otp_write(0x3000, 0x4021); // Write MRA
-		otp_write(0x5000, 0x1027); // Write MRB
-		otp_write(0x1000, 0x4820); // Write MR
-		writel(0x041930d4, OTP_TIMING);
-		break;
+	if (info_cb.version == OTP_AST2600A2) {
+		switch (soak) {
+		case 0: //default
+			otp_write(0x3000, 0x0210); // Write MRA
+			otp_write(0x5000, 0x0); // Write MRB
+			otp_write(0x1000, 0x0); // Write MR
+			break;
+		case 1: //normal program
+			otp_write(0x3000, 0x1200); // Write MRA
+			otp_write(0x5000, 0x100F); // Write MRB
+			otp_write(0x1000, 0x1024); // Write MR
+			writel(0x04190760, OTP_TIMING);
+			break;
+		case 2: //soak program
+			otp_write(0x3000, 0x1220); // Write MRA
+			otp_write(0x5000, 0x2004); // Write MRB
+			otp_write(0x1000, 0x08a4); // Write MR
+			writel(0x041930d4, OTP_TIMING);
+			break;
+		}
+	} else {
+		switch (soak) {
+		case 0: //default
+			otp_write(0x3000, 0x0); // Write MRA
+			otp_write(0x5000, 0x0); // Write MRB
+			otp_write(0x1000, 0x0); // Write MR
+			break;
+		case 1: //normal program
+			otp_write(0x3000, 0x4021); // Write MRA
+			otp_write(0x5000, 0x302f); // Write MRB
+			otp_write(0x1000, 0x4020); // Write MR
+			writel(0x04190760, OTP_TIMING);
+			break;
+		case 2: //soak program
+			otp_write(0x3000, 0x4021); // Write MRA
+			otp_write(0x5000, 0x1027); // Write MRB
+			otp_write(0x1000, 0x4820); // Write MR
+			writel(0x041930d4, OTP_TIMING);
+			break;
+		}
 	}
 
 	wait_complete();
