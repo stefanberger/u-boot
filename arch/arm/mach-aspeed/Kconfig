@@ -14,6 +14,14 @@ choice
 	depends on ARCH_ASPEED
 	default ASPEED_AST2500
 
+config ASPEED_AST2400
+        bool "Support Aspeed AST2400 SoC"
+        select CPU_ARM926EJS
+        help
+          The Aspeed AST2400 is a ARM-based SoC with arm926ejs CPU.
+          It is used as Board Management Controller on many server boards,
+          which is enabled by support of LPC and eSPI peripherals.
+
 config ASPEED_AST2500
 	bool "Support Aspeed AST2500 SoC"
 	select CPU_ARM1176
@@ -138,6 +146,7 @@ config ASPEED_KERNEL_FIT_DRAM_BASE
 	  The DRAM address where the Kernel FIT image
 	  will be loaded if XIP is not supported
 
+source "arch/arm/mach-aspeed/ast2400/Kconfig"
 source "arch/arm/mach-aspeed/ast2500/Kconfig"
 source "arch/arm/mach-aspeed/ast2600/Kconfig"
 
