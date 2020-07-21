@@ -22,11 +22,7 @@ static int ast2400_reset_deassert(struct reset_ctl *reset_ctl)
 	int ret = 0;
 
 	debug("ast2400_reset_deassert reset_ctl->id %ld \n", reset_ctl->id);
-
-	if(reset_ctl->id >= 32)
-		clrbits_le32(&scu->sysreset_ctrl2 , BIT(reset_ctl->id - 32));
-	else
-		clrbits_le32(&scu->sysreset_ctrl1 , BIT(reset_ctl->id));
+	clrbits_le32(&scu->sysreset_ctrl1 , BIT(reset_ctl->id));
 
 	return ret;
 }
@@ -40,32 +36,7 @@ static int ast2400_reset_assert(struct reset_ctl *reset_ctl)
 	int ret = 0;
 
 	debug("ast2400_reset_assert reset_ctl->id %ld \n", reset_ctl->id);
-	/*
-	 * To reset SDRAM, a specifal flag in SYSRESET register
-	 * needs to be enabled first
-	 */
-#if 0	 
-	reset_mode = ast_reset_mode_from_flags(reset_ctl->id);
-	reset_mask = ast_reset_mask_from_flags(reset_ctl->id);
-	reset_sdram = reset_mode == WDT_CTRL_RESET_SOC &&
-		(reset_mask & WDT_RESET_SDRAM);
-
-	if (reset_sdram) {
-		ast_scu_unlock(priv->scu);
-		setbits_le32(&priv->scu->sysreset_ctrl1,
-			     SCU_SYSRESET_SDRAM_WDT);
-		ret = wdt_expire_now(priv->wdt, reset_ctl->id);
-		clrbits_le32(&priv->scu->sysreset_ctrl1,
-			     SCU_SYSRESET_SDRAM_WDT);
-		ast_scu_lock(priv->scu);
-	} else {
-		ret = wdt_expire_now(priv->wdt, reset_ctl->id);
-	}
-#endif
-	if(reset_ctl->id >= 32)
-		setbits_le32(&scu->sysreset_ctrl2 , BIT(reset_ctl->id - 32));
-	else
-		setbits_le32(&scu->sysreset_ctrl1 , BIT(reset_ctl->id));
+	setbits_le32(&scu->sysreset_ctrl1 , BIT(reset_ctl->id));
 
 	return ret;
 }
