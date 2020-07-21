@@ -675,6 +675,7 @@ dtb-$(CONFIG_ARCH_BCM6858) += \
 	bcm968580xref.dtb
 
 dtb-$(CONFIG_ARCH_ASPEED) += \
+	ast2400-evb.dtb \
 	ast2500-evb.dtb \
 	ast2600a0-evb.dtb \
 	ast2600a0-ncsi.dtb \
