@@ -109,62 +109,58 @@ struct ast2400_clk_priv {
 };
 
 struct ast2400_scu {
-	u32 protection_key;
-	u32 sysreset_ctrl1;
-	u32 clk_sel1;
-	u32 clk_stop_ctrl1;
-	u32 freq_counter_ctrl;
-	u32 freq_counter_cmp;
-	u32 intr_ctrl;
-	u32 d2_pll_param;
-	u32 m_pll_param;
-	u32 h_pll_param;
-	u32 d_pll_param;
-	u32 misc_ctrl1;
-	u32 pci_config[3];
-	u32 sysreset_status;
-	u32 vga_handshake[2];
-	u32 mac_clk_delay;
-	u32 misc_ctrl2;
-	u32 vga_scratch[8];
-	u32 hwstrap;
-	u32 rng_ctrl;
-	u32 rng_data;
-	u32 rev_id;
-	u32 pinmux_ctrl[6];
-	u32 reserved0;
-	u32 extrst_sel;
-	u32 pinmux_ctrl1[4];
-	u32 reserved1[2];
-	u32 mac_clk_delay_100M;
-	u32 mac_clk_delay_10M;
-	u32 wakeup_enable;
-	u32 wakeup_control;
-	u32 reserved2[3];
-	u32 sysreset_ctrl2;
-	u32 clk_sel2;
-	u32 clk_stop_ctrl2;
-	u32 freerun_counter;
-	u32 freerun_counter_ext;
-	u32 clk_duty_meas_ctrl;
-	u32 clk_duty_meas_res;
-	u32 reserved3[4];
+	u32 protection_key;			/* 0x00 */
+	u32 sysreset_ctrl1;			/* 0x04 */
+	u32 clk_sel1;				/* 0x08 */
+	u32 clk_stop_ctrl1;			/* 0x0C */
+	u32 freq_counter_ctrl;		/* 0x10 */
+	u32 freq_counter_measure;	/* 0x14 */
+	u32 intr_ctrl;				/* 0x18 */
+	u32 d2_pll_param;			/* 0x1C */
+	u32 m_pll_param;			/* 0x20 */
+	u32 h_pll_param;			/* 0x24 */
+	u32 freq_counter_cmp;		/* 0x28 */
+	u32 misc_ctrl1;				/* 0x2C */
+	u32 pci_config[3];			/* 0x30 */
+	u32 sysreset_status;		/* 0x3C */
+	u32 vga_handshake[2];		/* 0x40 */
+	u32 mac_clk_delay;			/* 0x48 */
+	u32 misc_ctrl2;				/* 0x4C */
+	u32 vga_scratch[8];			/* 0x50 */
+	u32 hwstrap;				/* 0x70 */	
+	u32 rng_ctrl;				/* 0x74 */
+	u32 rng_data;				/* 0x78 */
+	u32 rev_id;					/* 0x7C */
+	u32 pinmux_ctrl[6];			/* 0x80 */
+	u32 reserved0;				/* 0x98 */
+	u32 wdt_rst_sel;			/* 0x9C */
+	u32 pinmux_ctrl1[3];		/* 0xA0 */
+	u32 reserved1[5];			/* 0xAC */
+	u32 wakeup_enable;			/* 0xC0 */
+	u32 wakeup_control;			/* 0xC4 */
+	u32 reserved2[2];			/* 0xC8 */
+	u32 hwstrap2;				/* 0xD0 */
+	u32 reserved3[3];			/* 0xD4 */
+	u32 freerun_counter;		/* 0xE0 */
+	u32 freerun_counter_ext;	/* 0xE4 */
+	//E8/EC
+	//F0/F4/F8/FC
+	u32 reserved4[6];			/* 0xE8 */
 	/* The next registers are not key-protected */
-	struct ast2400_cpu2 {
+	struct ast2400_cpu2 {		/* 0x100 */
 		u32 ctrl;
-		u32 base_addr[9];
+		u32 base_addr[5];
 		u32 cache_ctrl;
 	} cpu2;
-	u32 reserved4;
-	u32 d_pll_ext_param[3];
-	u32 d2_pll_ext_param[3];
-	u32 mh_pll_ext_param;
-	u32 reserved5;
-	u32 chip_id[2];
-	u32 reserved6[2];
-	u32 uart_clk_ctrl;
+	u32 reserved5[17];			/* 0x11C */
+	//11C/
+	//120/124/128/12c
+	//130/134/138/13c
+	//140/144/148/14c
+	//150/154/158/15c
+	u32 uart_clk_ctrl;			/* 0x160 */
 	u32 reserved7[7];
-	u32 pcie_config;
+	u32 pcie_config;			/* 0x180 */
 	u32 mmio_decode;
 	u32 reloc_ctrl_decode[2];
 	u32 mailbox_addr;

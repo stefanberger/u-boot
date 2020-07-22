@@ -1,6 +1,6 @@
 /*
  * This device tree is copied from
- * https://raw.githubusercontent.com/torvalds/linux/34ea5c9d/arch/arm/boot/dts/aspeed-g5.dtsi
+ * https://raw.githubusercontent.com/torvalds/linux/34ea5c9d/arch/arm/boot/dts/aspeed-g4.dtsi
  */
 #include "skeleton.dtsi"
 
@@ -137,7 +137,7 @@
 			compatible = "aspeed,ast2400-mac", "faraday,ftgmac100";
 			reg = <0x1e660000 0x180>;
 			interrupts = <2>;
-			clocks = <&scu ASPEED_CLK_GATE_MAC1CLK>, <&scu ASPEED_CLK_D2PLL>;
+			clocks = <&scu ASPEED_CLK_GATE_MAC1CLK>;
 			status = "disabled";
 		};
 
@@ -145,7 +145,7 @@
 			compatible = "aspeed,ast2400-mac", "faraday,ftgmac100";
 			reg = <0x1e680000 0x180>;
 			interrupts = <3>;
-			clocks = <&scu ASPEED_CLK_GATE_MAC2CLK>, <&scu ASPEED_CLK_D2PLL>;
+			clocks = <&scu ASPEED_CLK_GATE_MAC2CLK>;
 			status = "disabled";
 		};
 
@@ -184,7 +184,7 @@
 				#reset-cells = <1>;
 
 				pinctrl: pinctrl {
-					compatible = "aspeed,g5-pinctrl";
+					compatible = "aspeed,g4-pinctrl";
 					aspeed,external-nodes = <&gfx &lhc>;
 
 				};

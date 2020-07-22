@@ -261,7 +261,6 @@ static ulong ast2400_clk_get_rate(struct clk *clk)
 		return -ENOENT;
 		break;
 	}
-	printf("get id %ld rate %ld\n", clk->id, rate);
 
 	return rate;
 }
@@ -399,9 +398,34 @@ static unsigned long ast2400_clk_set_rate(struct clk *clk, ulong rate)
 
 static ulong ast2400_configure_mac(struct ast2400_scu *scu, int index)
 {
-	ulong hpll_rate = ast2400_get_hpll_rate(scu);
+	u32 reset_bit;
+	u32 clkstop_bit;
 
-	return 1;
+	switch (index) {
+	case 1:
+		reset_bit = BIT(ASPEED_RESET_MAC1);
+		clkstop_bit = BIT(SCU_CLKSTOP_MAC1);
+		break;
+	case 2:
+		reset_bit = BIT(ASPEED_RESET_MAC2);
+		clkstop_bit = BIT(SCU_CLKSTOP_MAC2);
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	/*
+	 * Disable MAC, start its clock and re-enable it.
+	 * The procedure and the delays (100us & 10ms) are
+	 * specified in the datasheet.
+	 */
+	setbits_le32(&scu->sysreset_ctrl1, reset_bit);
+	udelay(100);
+	clrbits_le32(&scu->clk_stop_ctrl1, clkstop_bit);
+	mdelay(10);
+	clrbits_le32(&scu->sysreset_ctrl1, reset_bit);
+
+	return 0;
 }
 
 #define SCU_CLKSTOP_SDIO 27
@@ -450,24 +474,22 @@ static int ast2400_clk_enable(struct clk *clk)
 	struct ast2400_clk_priv *priv = dev_get_priv(clk->dev);
 
 	switch (clk->id) {
-	/*
-	 * For MAC clocks the clock rate is
-	 * configured based on whether RGMII or RMII mode has been selected
-	 * through hardware strapping.
-	 */
-	case ASPEED_CLK_GATE_MAC1CLK:
-		ast2400_configure_mac(priv->scu, 1);
-		break;
-	case ASPEED_CLK_GATE_MAC2CLK:
-		ast2400_configure_mac(priv->scu, 2);
-		break;
-	case ASPEED_CLK_GATE_SDCLK:
-		ast2400_enable_sdclk(priv->scu);
-		break;
-	default:
-		pr_debug("can't enable clk \n");
-		return -ENOENT;
-		break;
+		case ASPEED_CLK_GATE_MAC1CLK:
+			ast2400_configure_mac(priv->scu, 1);
+			break;
+		case ASPEED_CLK_GATE_MAC2CLK:
+			ast2400_configure_mac(priv->scu, 2);
+			break;
+		case ASPEED_CLK_GATE_SDCLK:
+			ast2400_enable_sdclk(priv->scu);
+			break;
+		case ASPEED_CLK_GATE_SDEXTCLK:
+			ast2400_enable_extsdclk(priv->scu);
+			break;
+		default:
+			pr_debug("can't enable clk \n");
+			return -ENOENT;
+			break;
 	}
 
 	return 0;
