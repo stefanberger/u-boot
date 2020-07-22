@@ -318,9 +318,6 @@ TIME_TABLE_DDR4_1600:
 lowlevel_init:
 
 init_dram:
-    /* save lr */
-    mov   r4, lr
-
     /********************************************
        Initial Reset Procedure : Begin
      *******************************************/
@@ -2474,9 +2471,6 @@ set_D2PLL:
     ldr   r0, =0x1e782038
     ldr   r1, =0xEA
     str   r1, [r0]
-
-    /* restore lr */
-    mov   lr, r4
 
     /* back to arch calling code */
     mov   pc, lr
