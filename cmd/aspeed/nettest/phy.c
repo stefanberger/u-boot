@@ -197,17 +197,16 @@ uint32_t phy_read (MAC_ENGINE *eng, int index)
 } // End uint32_t phy_read (MAC_ENGINE *eng, int adr)
 
 //------------------------------------------------------------
-void phy_Read_Write (MAC_ENGINE *eng, int adr, uint32_t clr_mask, uint32_t set_mask) 
+void phy_clrset(MAC_ENGINE *eng, int adr, uint32_t clr_mask, uint32_t set_mask)
 {
 	if (DbgPrn_PHYRW) {
 		printf("[RW ]%02d: clr:0x%04x: set:0x%04x (%02d:%08x)\n", adr,
 		       clr_mask, set_mask, eng->phy.Adr, eng->run.mdio_base);
 		if (!eng->run.tm_tx_only)
-			PRINTF(
-			    FP_LOG,
-			    "[RW ]%02d: clr:0x%04x: set:0x%04x (%02d:%08x)\n",
-			    adr, clr_mask, set_mask, eng->phy.Adr,
-			    eng->run.mdio_base);
+			PRINTF(FP_LOG,
+			       "[RW ]%02d: clr:0x%04x: set:0x%04x (%02d:%08x)\n",
+			       adr, clr_mask, set_mask, eng->phy.Adr,
+			       eng->run.mdio_base);
 	}
 	phy_write(eng, adr, ((phy_read(eng, adr) & (~clr_mask)) | set_mask));
 }
@@ -228,24 +227,19 @@ void phy_dump (MAC_ENGINE *eng) {
 //------------------------------------------------------------
 void phy_id (MAC_ENGINE *eng, uint8_t option)
 {
+        uint32_t reg_adr;
+        int8_t phy_addr_orig;
 
-        uint32_t      reg_adr;
-        int8_t       PHY_ADR_org;
+        phy_addr_orig = eng->phy.Adr;
+	for (eng->phy.Adr = 0; eng->phy.Adr < 32; eng->phy.Adr++) {
+		PRINTF(option, "[%02d] ", eng->phy.Adr);
+                PRINTF(option, "%d:%04x ", 2, phy_read(eng, 2));
+                PRINTF(option, "%d:%04x ", 3, phy_read(eng, 3));
 
-        PHY_ADR_org = eng->phy.Adr;
-        for ( eng->phy.Adr = 0; eng->phy.Adr < 32; eng->phy.Adr++ ) {
-
-                PRINTF(option, "[%02d] ", eng->phy.Adr);
-
-                for ( reg_adr = 2; reg_adr <= 3; reg_adr++ ) {
-                        PRINTF(option, "%d:%04x ", reg_adr, phy_read( eng, reg_adr ));
-                }
-
-                if ( ( eng->phy.Adr % 4 ) == 3 ) {
-                        PRINTF(option, "\n");
-                }
-        }
-        eng->phy.Adr = PHY_ADR_org;
+		if ((eng->phy.Adr % 4) == 3)
+			PRINTF(option, "\n");
+	}
+	eng->phy.Adr = phy_addr_orig;
 }
 
 //------------------------------------------------------------
@@ -264,7 +258,7 @@ void phy_delay (int dt)
 // PHY IC basic
 //------------------------------------------------------------
 void phy_basic_setting (MAC_ENGINE *eng) {
-        phy_Read_Write( eng,  0, 0x7140, eng->phy.PHY_00h ); //clr set
+        phy_clrset( eng,  0, 0x7140, eng->phy.PHY_00h );
 
         if ( DbgPrn_PHYRW ) {
                 printf("[Set]00: 0x%04x (%02d:%08x)\n", phy_read( eng, PHY_REG_BMCR ), eng->phy.Adr, eng->run.mdio_base );
@@ -300,8 +294,8 @@ void phy_Wait_Reset_Done (MAC_ENGINE *eng) {
 void phy_Reset (MAC_ENGINE *eng) {
         phy_basic_setting( eng );
 
-//	phy_Read_Write( eng,  0, 0x0000, 0x8000 | eng->phy.PHY_00h );//clr set//Rst PHY
-        phy_Read_Write( eng,  0, 0x7140, 0x8000 | eng->phy.PHY_00h );//clr set//Rst PHY
+//	phy_clrset( eng,  0, 0x0000, 0x8000 | eng->phy.PHY_00h );//clr set//Rst PHY
+        phy_clrset( eng,  0, 0x7140, 0x8000 | eng->phy.PHY_00h );//clr set//Rst PHY
 	//phy_write( eng,  0, 0x8000);//clr set//Rst PHY
         phy_Wait_Reset_Done( eng );
 
@@ -350,11 +344,11 @@ void recov_phy_marvell (MAC_ENGINE *eng) {//88E1111
                         phy_Reset( eng );
 
                         phy_write( eng, 29, 0x0007 );
-                        phy_Read_Write( eng, 30, 0x0008, 0x0000 );//clr set
+                        phy_clrset( eng, 30, 0x0008, 0x0000 );//clr set
                         phy_write( eng, 29, 0x0010 );
-                        phy_Read_Write( eng, 30, 0x0002, 0x0000 );//clr set
+                        phy_clrset( eng, 30, 0x0002, 0x0000 );//clr set
                         phy_write( eng, 29, 0x0012 );
-                        phy_Read_Write( eng, 30, 0x0001, 0x0000 );//clr set
+                        phy_clrset( eng, 30, 0x0001, 0x0000 );//clr set
 
                         phy_write( eng, 18, eng->phy.PHY_12h );
                 }
@@ -379,18 +373,18 @@ void phy_marvell (MAC_ENGINE *eng) {//88E1111
                         eng->phy.PHY_09h = phy_read( eng, PHY_GBCR );
                         eng->phy.PHY_12h = phy_read( eng, PHY_INER );
                         phy_write( eng, 18, 0x0000 );
-                        phy_Read_Write( eng,  9, 0x0000, 0x1800 );//clr set
+                        phy_clrset( eng,  9, 0x0000, 0x1800 );//clr set
                 }
 
                 phy_Reset( eng );
 
                 if ( eng->run.speed_sel[ 0 ] ) {
                         phy_write( eng, 29, 0x0007 );
-                        phy_Read_Write( eng, 30, 0x0000, 0x0008 );//clr set
+                        phy_clrset( eng, 30, 0x0000, 0x0008 );//clr set
                         phy_write( eng, 29, 0x0010 );
-                        phy_Read_Write( eng, 30, 0x0000, 0x0002 );//clr set
+                        phy_clrset( eng, 30, 0x0000, 0x0002 );//clr set
                         phy_write( eng, 29, 0x0012 );
-                        phy_Read_Write( eng, 30, 0x0000, 0x0001 );//clr set
+                        phy_clrset( eng, 30, 0x0000, 0x0001 );//clr set
                 }
         }
 
@@ -411,7 +405,7 @@ void recov_phy_marvell0 (MAC_ENGINE *eng) {//88E1310
         else {
                 if ( eng->run.speed_sel[ 0 ] ) {
                         phy_write( eng, 22, 0x0006 );
-                        phy_Read_Write( eng, 16, 0x0020, 0x0000 );//clr set
+                        phy_clrset( eng, 16, 0x0020, 0x0000 );//clr set
                         phy_write( eng, 22, 0x0000 );
                 }
         }
@@ -444,13 +438,13 @@ phy_read( eng, 21 ); // v069
                 phy_write( eng, 22, 0x0002 );
 
                 if ( eng->run.speed_sel[ 0 ] ) {
-                        phy_Read_Write( eng, 21, 0x6040, 0x0040 );//clr set
+                        phy_clrset( eng, 21, 0x6040, 0x0040 );//clr set
                 }
                 else if ( eng->run.speed_sel[ 1 ] ) {
-                        phy_Read_Write( eng, 21, 0x6040, 0x2000 );//clr set
+                        phy_clrset( eng, 21, 0x6040, 0x2000 );//clr set
                 }
                 else {
-                        phy_Read_Write( eng, 21, 0x6040, 0x0000 );//clr set
+                        phy_clrset( eng, 21, 0x6040, 0x0000 );//clr set
                 }
                 phy_write( eng, 22, 0x0000 );
                 phy_Reset(  eng  );
@@ -458,7 +452,7 @@ phy_read( eng, 21 ); // v069
         else {
                 if ( eng->run.speed_sel[ 0 ] ) {
                         phy_write( eng, 22, 0x0006 );
-                        phy_Read_Write( eng, 16, 0x0000, 0x0020 );//clr set
+                        phy_clrset( eng, 16, 0x0000, 0x0020 );//clr set
 phy_read( eng, 16 ); // v069
                         phy_write( eng, 22, 0x0000 );
                 }
@@ -540,7 +534,7 @@ void recov_phy_marvell2 (MAC_ENGINE *eng) {//88E1512//88E15 10/12/14/18
                         // Enable Stub Test
                         // switch page 6
                         phy_write( eng, 22, 0x0006 );
-                        phy_Read_Write( eng, 18, 0x0008, 0x0000 );//clr set
+                        phy_clrset( eng, 18, 0x0008, 0x0000 );//clr set
                         phy_write( eng, 22, 0x0000 );
                 }
         }
@@ -593,13 +587,13 @@ void phy_marvell2 (MAC_ENGINE *eng) {//88E1512//88E15 10/12/14/18
                 // switch page 2
                 phy_write( eng, 22, 0x0002 );
                 if ( eng->run.speed_sel[ 0 ] ) {
-                        phy_Read_Write( eng, 21, 0x2040, 0x0040 );//clr set
+                        phy_clrset( eng, 21, 0x2040, 0x0040 );//clr set
                 }
                 else if ( eng->run.speed_sel[ 1 ] ) {
-                        phy_Read_Write( eng, 21, 0x2040, 0x2000 );//clr set
+                        phy_clrset( eng, 21, 0x2040, 0x2000 );//clr set
                 }
                 else {
-                        phy_Read_Write( eng, 21, 0x2040, 0x0000 );//clr set
+                        phy_clrset( eng, 21, 0x2040, 0x0000 );//clr set
                 }
                 phy_write( eng, 22, 0x0000 );
 
@@ -619,7 +613,7 @@ void phy_marvell2 (MAC_ENGINE *eng) {//88E1512//88E15 10/12/14/18
                         // Enable Stub Test
                         // switch page 6
                         phy_write( eng, 22, 0x0006 );
-                        phy_Read_Write( eng, 18, 0x0000, 0x0008 );//clr set
+                        phy_clrset( eng, 18, 0x0000, 0x0008 );//clr set
                         phy_write( eng, 22, 0x0000 );
                 }
 
@@ -692,7 +686,7 @@ void phy_broadcom (MAC_ENGINE *eng) {//BCM5221
                         phy_write( eng, 25, 0x1f01 );//Force MDI  //Measuring from channel A
                 }
                 else {
-                        phy_Read_Write( eng, 24, 0x0000, 0x4000 );//clr set//Force Link
+                        phy_clrset( eng, 24, 0x0000, 0x4000 );//clr set//Force Link
 //                      phy_write( eng,  0, eng->phy.PHY_00h );
 //                      phy_write( eng, 30, 0x1000 );
                 }
@@ -998,7 +992,7 @@ void phy_realtek1 (MAC_ENGINE *eng) {//RTL8211D
                                 }
                                 else {//From Channel B
                                         //Rev 1.2
-                                        phy_Read_Write( eng, 17, 0x0008, 0x0000 ); // clr set
+                                        phy_clrset( eng, 17, 0x0008, 0x0000 ); // clr set
                                         phy_write( eng, 23, 0xa102 );         // MDI
                                         phy_write( eng, 16, 0x010e );
                                 }
@@ -1196,7 +1190,7 @@ void phy_realtek2 (MAC_ENGINE *eng)
 #ifdef RTK_DEBUG
 #else
         phy_write( eng, 31, 0x0000 );
-        phy_Read_Write( eng,  0, 0x0000, 0x8000 | eng->phy.PHY_00h ); // clr set // Rst PHY
+        phy_clrset( eng,  0, 0x0000, 0x8000 | eng->phy.PHY_00h ); // clr set // Rst PHY
         phy_Wait_Reset_Done( eng );
         phy_delay(30);
 #endif
@@ -1271,7 +1265,7 @@ void phy_realtek2 (MAC_ENGINE *eng)
 #else
                 phy_basic_setting( eng );
 
-                phy_Read_Write( eng,  0, 0x0000, 0x8000 | eng->phy.PHY_00h );//clr set//Rst PHY
+                phy_clrset( eng,  0, 0x0000, 0x8000 | eng->phy.PHY_00h );//clr set//Rst PHY
                 phy_Wait_Reset_Done( eng );
                 phy_delay(30);
 
@@ -1837,7 +1831,7 @@ void phy_realtek6 (MAC_ENGINE *eng)
 		// RXDLY2 and TXDLY2 of RTL8363S should set to LOW
 		phy_basic_setting(eng);
 
-		phy_Read_Write(eng, 0, 0x0000,
+		phy_clrset(eng, 0, 0x0000,
 			       0x8000 | eng->phy.PHY_00h); // clr set//Rst PHY
 		phy_Wait_Reset_Done(eng);
 		phy_delay(30);
@@ -1883,12 +1877,12 @@ void phy_micrel0 (MAC_ENGINE *eng) {//KSZ8031/KSZ8051
         else                             sprintf((char *)eng->phy.phy_name, "%s-25MHz Mode", eng->phy.phy_name);
 
         if ( eng->run.TM_IEEE ) {
-                phy_Read_Write( eng,  0, 0x0000, 0x8000 | eng->phy.PHY_00h );//clr set//Rst PHY
+                phy_clrset( eng,  0, 0x0000, 0x8000 | eng->phy.PHY_00h );//clr set//Rst PHY
                 phy_Wait_Reset_Done( eng );
 
-                phy_Read_Write( eng, 31, 0x0000, 0x2000 );//clr set//1Fh[13] = 1: Disable auto MDI/MDI-X
+                phy_clrset( eng, 31, 0x0000, 0x2000 );//clr set//1Fh[13] = 1: Disable auto MDI/MDI-X
                 phy_basic_setting( eng );
-                phy_Read_Write( eng, 31, 0x0000, 0x0800 );//clr set//1Fh[11] = 1: Force link pass
+                phy_clrset( eng, 31, 0x0000, 0x0800 );//clr set//1Fh[11] = 1: Force link pass
 
 //              phy_delay(2500);//2.5 sec
         }
@@ -1897,11 +1891,11 @@ void phy_micrel0 (MAC_ENGINE *eng) {//KSZ8031/KSZ8051
 
                 //Reg16h[6] = 1         : RMII B-to-B override
                 //Reg16h[1] = 1(default): RMII override
-                phy_Read_Write( eng, 22, 0x0000, 0x0042 );//clr set
+                phy_clrset( eng, 22, 0x0000, 0x0042 );//clr set
         }
 
         if ( eng->phy.PHY_1fh & 0x0080 )
-                phy_Read_Write( eng, 31, 0x0000, 0x0080 );//clr set//Reset PHY will clear Reg1Fh[7]
+                phy_clrset( eng, 31, 0x0000, 0x0080 );//clr set//Reset PHY will clear Reg1Fh[7]
 }
 
 //------------------------------------------------------------
@@ -2059,10 +2053,10 @@ void recov_phy_atheros (MAC_ENGINE *eng) {//AR8035
 		}
 	} else if (eng->phy.loopback) {
 	} else {
-		phy_Read_Write(
+		phy_clrset(
 		    eng, 11, 0x0000,
 		    0x8000); // clr set//Disable hibernate: Reg0Bh[15] = 0
-		phy_Read_Write(
+		phy_clrset(
 		    eng, 17, 0x0001,
 		    0x0000); // clr set//Enable external loopback: Reg11h[0] = 1
 	}
@@ -2184,10 +2178,10 @@ void phy_atheros (MAC_ENGINE *eng)
 	} else if (eng->phy.loopback) {
 		phy_write(eng, 0, eng->phy.PHY_00h);
 	} else {
-		phy_Read_Write(
+		phy_clrset(
 		    eng, 11, 0x8000,
 		    0x0000); // clr set//Disable hibernate: Reg0Bh[15] = 0
-		phy_Read_Write(
+		phy_clrset(
 		    eng, 17, 0x0000,
 		    0x0001); // clr set//Enable external loopback: Reg11h[0] = 1
 
