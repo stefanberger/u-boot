@@ -212,16 +212,18 @@ void phy_clrset(MAC_ENGINE *eng, int adr, uint32_t clr_mask, uint32_t set_mask)
 }
 
 //------------------------------------------------------------
-void phy_dump (MAC_ENGINE *eng) {
-        int        index;
+void phy_dump(MAC_ENGINE *eng)
+{
+	int index;
 
-        printf("[PHY%d][%d]----------------\n", eng->run.mac_idx + 1, eng->phy.Adr);
-        for (index = 0; index < 32; index++) {
-                printf("%02d: %04x ", index, phy_read( eng, index ));
+	printf("[PHY%d][%d]----------------\n", eng->run.mac_idx + 1,
+	       eng->phy.Adr);
+	for (index = 0; index < 32; index++) {
+		printf("%02d: %04x ", index, phy_read(eng, index));
 
-                if ((index % 8) == 7)
-                        printf("\n");
-        }
+		if ((index % 8) == 7)
+			printf("\n");
+	}
 }
 
 //------------------------------------------------------------
@@ -257,51 +259,64 @@ void phy_delay (int dt)
 //------------------------------------------------------------
 // PHY IC basic
 //------------------------------------------------------------
-void phy_basic_setting (MAC_ENGINE *eng) {
-        phy_clrset( eng,  0, 0x7140, eng->phy.PHY_00h );
+void phy_basic_setting(MAC_ENGINE *eng)
+{
+	phy_clrset(eng, 0, 0x7140, eng->phy.PHY_00h);
 
-        if ( DbgPrn_PHYRW ) {
-                printf("[Set]00: 0x%04x (%02d:%08x)\n", phy_read( eng, PHY_REG_BMCR ), eng->phy.Adr, eng->run.mdio_base );
-                if ( !eng->run.tm_tx_only ) PRINTF( FP_LOG, "[Set]00: 0x%04x (%02d:%08x)\n", phy_read( eng, PHY_REG_BMCR ), eng->phy.Adr, eng->run.mdio_base );
-        }
+	if (DbgPrn_PHYRW) {
+		printf("[Set]00: 0x%04x (%02d:%08x)\n",
+		       phy_read(eng, PHY_REG_BMCR), eng->phy.Adr,
+		       eng->run.mdio_base);
+		if (!eng->run.tm_tx_only)
+			PRINTF(FP_LOG, "[Set]00: 0x%04x (%02d:%08x)\n",
+			       phy_read(eng, PHY_REG_BMCR), eng->phy.Adr,
+			       eng->run.mdio_base);
+	}
 }
 
 //------------------------------------------------------------
-void phy_Wait_Reset_Done (MAC_ENGINE *eng) {
-        int        timeout = 0;
+void phy_wait_reset_done(MAC_ENGINE *eng)
+{
+	int timeout = 0;
 
-        while (  phy_read( eng, PHY_REG_BMCR ) & 0x8000 ) {
-                if (++timeout > TIME_OUT_PHY_Rst) {
-                        if ( !eng->run.tm_tx_only )
-                                PRINTF( FP_LOG, "[PHY-Reset] Time out: %08x\n", readl(eng->run.mdio_base));
+	while (phy_read(eng, PHY_REG_BMCR) & 0x8000) {
+		if (++timeout > TIME_OUT_PHY_Rst) {
+			if (!eng->run.tm_tx_only)
+				PRINTF(FP_LOG, "[PHY-Reset] Time out: %08x\n",
+				       readl(eng->run.mdio_base));
 
-                        FindErr( eng, Err_Flag_PHY_TimeOut_Rst );
-                        break;
-                }
-        }//wait Rst Done
+			FindErr(eng, Err_Flag_PHY_TimeOut_Rst);
+			break;
+		}
+	} //wait Rst Done
 
-
-        if ( DbgPrn_PHYRW ) {
-                printf("[Clr]00: 0x%04x (%02d:%08x)\n", phy_read( eng, PHY_REG_BMCR ), eng->phy.Adr, eng->run.mdio_base );
-                if ( !eng->run.tm_tx_only ) PRINTF( FP_LOG, "[Clr]00: 0x%04x (%02d:%08x)\n", phy_read( eng, PHY_REG_BMCR ), eng->phy.Adr, eng->run.mdio_base );
-        }
+	if (DbgPrn_PHYRW) {
+		printf("[Clr]00: 0x%04x (%02d:%08x)\n",
+		       phy_read(eng, PHY_REG_BMCR), eng->phy.Adr,
+		       eng->run.mdio_base);
+		if (!eng->run.tm_tx_only)
+			PRINTF(FP_LOG, "[Clr]00: 0x%04x (%02d:%08x)\n",
+			       phy_read(eng, PHY_REG_BMCR), eng->phy.Adr,
+			       eng->run.mdio_base);
+	}
 #ifdef Delay_PHYRst
-        DELAY( Delay_PHYRst );
+	DELAY(Delay_PHYRst);
 #endif
 }
 
 //------------------------------------------------------------
-void phy_Reset (MAC_ENGINE *eng) {
-        phy_basic_setting( eng );
+void phy_Reset(MAC_ENGINE *eng)
+{
+	phy_basic_setting(eng);
 
-//	phy_clrset( eng,  0, 0x0000, 0x8000 | eng->phy.PHY_00h );//clr set//Rst PHY
-        phy_clrset( eng,  0, 0x7140, 0x8000 | eng->phy.PHY_00h );//clr set//Rst PHY
-	//phy_write( eng,  0, 0x8000);//clr set//Rst PHY
-        phy_Wait_Reset_Done( eng );
+	//phy_clrset(eng, 0, 0x0000, 0x8000 | eng->phy.PHY_00h);
+	phy_clrset(eng, 0, 0x7140, 0x8000 | eng->phy.PHY_00h);
+	//phy_write(eng, 0, 0x8000); //clr set//Rst PHY
+	phy_wait_reset_done(eng);
 
-        phy_basic_setting( eng );
+	phy_basic_setting(eng);
 #ifdef Delay_PHYRst
-        DELAY( Delay_PHYRst );
+	DELAY(Delay_PHYRst);
 #endif
 }
 
@@ -338,21 +353,21 @@ void recov_phy_marvell (MAC_ENGINE *eng) {//88E1111
         else if ( eng->phy.loopback ) {
         }
         else {
-                if ( eng->run.speed_sel[ 0 ] ) {
-                        phy_write( eng,  9, eng->phy.PHY_09h );
+		if (eng->run.speed_sel[0]) {
+			phy_write(eng, 9, eng->phy.PHY_09h);
 
-                        phy_Reset( eng );
+			phy_Reset(eng);
 
-                        phy_write( eng, 29, 0x0007 );
-                        phy_clrset( eng, 30, 0x0008, 0x0000 );//clr set
-                        phy_write( eng, 29, 0x0010 );
-                        phy_clrset( eng, 30, 0x0002, 0x0000 );//clr set
-                        phy_write( eng, 29, 0x0012 );
-                        phy_clrset( eng, 30, 0x0001, 0x0000 );//clr set
+			phy_write(eng, 29, 0x0007);
+			phy_clrset(eng, 30, 0x0008, 0x0000); //clr set
+			phy_write(eng, 29, 0x0010);
+			phy_clrset(eng, 30, 0x0002, 0x0000); //clr set
+			phy_write(eng, 29, 0x0012);
+			phy_clrset(eng, 30, 0x0001, 0x0000); //clr set
 
-                        phy_write( eng, 18, eng->phy.PHY_12h );
-                }
-        }
+			phy_write(eng, 18, eng->phy.PHY_12h);
+		}
+	}
 }
 
 //------------------------------------------------------------
@@ -1053,7 +1068,7 @@ void phy_realtek1 (MAC_ENGINE *eng) {//RTL8211D
                         phy_write( eng, 23, 0xa121 );
                         phy_write( eng, 23, 0xa161 );
                         phy_write( eng,  0, 0x8000 );
-                        phy_Wait_Reset_Done( eng );
+                        phy_wait_reset_done( eng );
 
 //                      phy_delay(200); // new in Rev. 1.6
                         phy_delay(5000); // 20150504
@@ -1127,7 +1142,7 @@ void recov_phy_realtek2 (MAC_ENGINE *eng)
                         phy_write( eng,  0, 0x8000 );
 #ifdef RTK_DEBUG
 #else
-                        phy_Wait_Reset_Done( eng );
+                        phy_wait_reset_done( eng );
                         phy_delay(30);
 #endif
 
@@ -1191,7 +1206,7 @@ void phy_realtek2 (MAC_ENGINE *eng)
 #else
         phy_write( eng, 31, 0x0000 );
         phy_clrset( eng,  0, 0x0000, 0x8000 | eng->phy.PHY_00h ); // clr set // Rst PHY
-        phy_Wait_Reset_Done( eng );
+        phy_wait_reset_done( eng );
         phy_delay(30);
 #endif
 
@@ -1266,7 +1281,7 @@ void phy_realtek2 (MAC_ENGINE *eng)
                 phy_basic_setting( eng );
 
                 phy_clrset( eng,  0, 0x0000, 0x8000 | eng->phy.PHY_00h );//clr set//Rst PHY
-                phy_Wait_Reset_Done( eng );
+                phy_wait_reset_done( eng );
                 phy_delay(30);
 
                 phy_basic_setting( eng );
@@ -1462,7 +1477,7 @@ void phy_realtek3 (MAC_ENGINE *eng) {//RTL8211C
         }
         else if ( eng->phy.loopback ) {
                 phy_write( eng,  0, 0x9200 );
-                phy_Wait_Reset_Done( eng );
+                phy_wait_reset_done( eng );
                 phy_delay(30);
 
                 phy_write( eng, 17, 0x401c );
@@ -1549,7 +1564,7 @@ void phy_realtek4 (MAC_ENGINE *eng) {//RTL8201F
 
                         if ( eng->run.speed_sel[ 1 ] ) {
                                 phy_write( eng,  0, 0x8000 ); // Reset PHY
-                                phy_Wait_Reset_Done( eng );
+                                phy_wait_reset_done( eng );
                                 phy_write( eng, 24, 0x0310 ); // Disable ALDPS
 
                                 if ( eng->run.ieee_sel == 0 ) {//From Channel A (RJ45 pair 1, 2)
@@ -1632,7 +1647,7 @@ void recov_phy_realtek5 (MAC_ENGINE *eng)
                                 phy_write( eng, 24, 0x2118 );//RGMII
                                 phy_write( eng,  9, 0x0200 );
                                 phy_write( eng,  0, 0x9200 );
-                                phy_Wait_Reset_Done( eng );
+                                phy_wait_reset_done( eng );
                         }
                         else {
                                 //Rev 1.0
@@ -1642,7 +1657,7 @@ void recov_phy_realtek5 (MAC_ENGINE *eng)
                                 phy_write( eng,  4, 0x01e1 );
                                 phy_write( eng,  9, 0x0200 );
                                 phy_write( eng,  0, 0x9200 );
-                                phy_Wait_Reset_Done( eng );
+                                phy_wait_reset_done( eng );
                         }
                 }
                 else {
@@ -1736,7 +1751,7 @@ void phy_realtek5 (MAC_ENGINE *eng) {//RTL8211F
 					phy_write(eng, 25, 0x0843);
 				}
 				phy_write(eng, 0, 0x9200);
-				phy_Wait_Reset_Done(eng);
+				phy_wait_reset_done(eng);
 
 				if ((eng->run.ieee_sel & 0x6) ==
 				    0) { // For Diff. Voltage/TP-IDL/Jitter
@@ -1770,7 +1785,7 @@ void phy_realtek5 (MAC_ENGINE *eng) {//RTL8211F
 #ifdef RTK_DEBUG
 			phy_delay(60);
 #else
-			phy_Wait_Reset_Done(eng);
+			phy_wait_reset_done(eng);
 			phy_delay(30);
 #endif
 
@@ -1790,7 +1805,7 @@ void phy_realtek5 (MAC_ENGINE *eng) {//RTL8211F
 #else
 			phy_write(eng, 31, 0x0a43);
 			phy_write(eng, 0, 0x8000);
-			phy_Wait_Reset_Done(eng);
+			phy_wait_reset_done(eng);
 			phy_delay(30);
 #endif
 
@@ -1833,7 +1848,7 @@ void phy_realtek6 (MAC_ENGINE *eng)
 
 		phy_clrset(eng, 0, 0x0000,
 			       0x8000 | eng->phy.PHY_00h); // clr set//Rst PHY
-		phy_Wait_Reset_Done(eng);
+		phy_wait_reset_done(eng);
 		phy_delay(30);
 
 		phy_basic_setting(eng);
@@ -1878,7 +1893,7 @@ void phy_micrel0 (MAC_ENGINE *eng) {//KSZ8031/KSZ8051
 
         if ( eng->run.TM_IEEE ) {
                 phy_clrset( eng,  0, 0x0000, 0x8000 | eng->phy.PHY_00h );//clr set//Rst PHY
-                phy_Wait_Reset_Done( eng );
+                phy_wait_reset_done( eng );
 
                 phy_clrset( eng, 31, 0x0000, 0x2000 );//clr set//1Fh[13] = 1: Disable auto MDI/MDI-X
                 phy_basic_setting( eng );
