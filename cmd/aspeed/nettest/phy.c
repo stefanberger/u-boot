@@ -229,7 +229,6 @@ void phy_dump(MAC_ENGINE *eng)
 //------------------------------------------------------------
 void phy_id (MAC_ENGINE *eng, uint8_t option)
 {
-        uint32_t reg_adr;
         int8_t phy_addr_orig;
 
         phy_addr_orig = eng->phy.Adr;
@@ -305,7 +304,7 @@ void phy_wait_reset_done(MAC_ENGINE *eng)
 }
 
 //------------------------------------------------------------
-void phy_reset(MAC_ENGINE *eng)
+static void phy_reset(MAC_ENGINE *eng)
 {
 	phy_basic_setting(eng);
 
