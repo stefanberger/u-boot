@@ -2236,7 +2236,7 @@ uint32_t phy_find_addr(MAC_ENGINE *eng)
         value = phy_read(eng, PHY_REG_ID_1);
 	
         ret = PHY_IS_VALID(value);
-        if ((ret == 0) && (eng->arg.ctrl.b.skip_check_phy_id)) {
+        if ((ret == 0) && (eng->arg.ctrl.b.skip_phy_id_check)) {
 		value = phy_read(eng, PHY_REG_BMCR);
 		if ((value & BIT(15)) && (0 == eng->arg.ctrl.b.skip_phy_init)) {
                         /* user wants to skip PHY init but PHY is in reset state
@@ -2276,7 +2276,7 @@ uint32_t phy_find_addr(MAC_ENGINE *eng)
 	eng->phy.id2 = phy_read(eng, PHY_REG_ID_2);
         value = (eng->phy.id2 << 16) | eng->phy.id1;
         
-	if (0 == eng->arg.ctrl.b.skip_check_phy_id) {
+	if (0 == eng->arg.ctrl.b.skip_phy_id_check) {
                 if ((value == 0) || (value == 0xffffffff)) {
                         sprintf((char *)eng->phy.phy_name, "--");
                         if (0 == eng->arg.ctrl.b.skip_phy_init)
@@ -2367,7 +2367,7 @@ void phy_select(MAC_ENGINE *eng, PHY_ENGINE *phyeng)
 	if (eng->arg.ctrl.b.skip_phy_init) {
 		phyeng->fp_set = NULL;
 		phyeng->fp_clr = NULL;
-	} else if (eng->arg.ctrl.b.phy_skip_deinit) {
+	} else if (eng->arg.ctrl.b.skip_phy_deinit) {
 		phyeng->fp_clr = NULL;
 	}
 }

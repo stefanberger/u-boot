@@ -864,7 +864,7 @@ static uint32_t setup_running(MAC_ENGINE *p_eng)
 	if (p_eng->arg.run_mode == MODE_DEDICATED) {
 		n_desp_min = p_eng->run.TM_IOTiming;
 
-		if (p_eng->arg.ctrl.b.skip_check_phy_id &&
+		if (p_eng->arg.ctrl.b.skip_phy_id_check &&
 		    (p_eng->arg.test_mode == 0))
 			/* for SMSC's LAN9303 issue */
 			p_eng->dat.Des_Num = 114;
