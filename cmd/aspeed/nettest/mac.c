@@ -1086,7 +1086,9 @@ void FPri_End (MAC_ENGINE *eng, uint8_t option)
 		} // End switch ( eng->ncsi_cap.PCI_DID_VID )
 	}
 	else {
-		PRINTF( option, "[PHY] Adr:%d ID2:%04x ID3:%04x (%s)\n", eng->phy.Adr, eng->phy.PHY_ID2, eng->phy.PHY_ID3, eng->phy.phy_name);
+		PRINTF(option, "[PHY] @addr %d: id = %04x_%04x (%s)\n",
+		       eng->phy.Adr, eng->phy.id1, eng->phy.id2,
+		       eng->phy.phy_name);
 	} // End if ( eng->arg.run_mode == MODE_NCSI )	
 } // End void FPri_End (MAC_ENGINE *eng, uint8_t option)
 

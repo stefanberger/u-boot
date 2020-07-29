@@ -864,7 +864,7 @@ static uint32_t setup_running(MAC_ENGINE *p_eng)
 	if (p_eng->arg.run_mode == MODE_DEDICATED) {
 		n_desp_min = p_eng->run.TM_IOTiming;
 
-		if (p_eng->arg.ctrl.b.phy_skip_check &&
+		if (p_eng->arg.ctrl.b.skip_check_phy_id &&
 		    (p_eng->arg.test_mode == 0))
 			/* for SMSC's LAN9303 issue */
 			p_eng->dat.Des_Num = 114;
@@ -1493,7 +1493,7 @@ int mac_test(int argc, char * const argv[], uint32_t mode)
 	scu_enable_mac(&mac_eng);
 	if (mac_eng.arg.run_mode == MODE_DEDICATED) {
 		if (1 == phy_find_addr(&mac_eng)) {
-			phy_sel(&mac_eng, &phy_eng);		
+			phy_select(&mac_eng, &phy_eng);		
 		}
 	}
 

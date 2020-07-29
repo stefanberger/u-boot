@@ -430,9 +430,9 @@ typedef struct {
 typedef union {
 	uint32_t w;
 	struct {
-		uint32_t phy_skip_init	: 1;	/* bit[0] */
+		uint32_t skip_phy_init	: 1;	/* bit[0] */
 		uint32_t phy_skip_deinit: 1;	/* bit[1] */
-		uint32_t phy_skip_check	: 1;	/* bit[2] */
+		uint32_t skip_check_phy_id	: 1;	/* bit[2] */
 		uint32_t reserved_0	: 1;	/* bit[3] */
 		uint32_t phy_int_loopback : 1;	/* bit[4] */
 		uint32_t mac_int_loopback : 1;	/* bit[5] */
@@ -525,8 +525,8 @@ typedef struct {
 	int8_t                 default_phy                   ;
 	int8_t                 Adr                           ;
 
-	uint32_t PHY_ID3                       ;
-	uint32_t PHY_ID2                       ;
+	uint16_t id2                       ;
+	uint16_t id1                       ;
 
 	uint32_t PHY_00h                       ;
 	uint32_t PHY_06h                       ;
@@ -861,7 +861,7 @@ GLOBAL char TestingLoop (MAC_ENGINE *eng, uint32_t loop_checknum);
 GLOBAL void    init_phy (MAC_ENGINE *eng, PHY_ENGINE *phyeng);
 
 
-GLOBAL void    phy_sel (MAC_ENGINE *eng, PHY_ENGINE *phyeng);
+GLOBAL void    phy_select (MAC_ENGINE *eng, PHY_ENGINE *phyeng);
 GLOBAL void    recov_phy (MAC_ENGINE *eng, PHY_ENGINE *phyeng);
 GLOBAL int     FindErr (MAC_ENGINE *eng, int value);
 GLOBAL int     FindErr_Des (MAC_ENGINE *eng, int value);
