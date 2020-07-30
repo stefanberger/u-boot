@@ -51,6 +51,7 @@
 
 #define AST_FMC_BASE		(0x1E620000)
 #define AST_FMC_CE0_CTRL	(AST_FMC_BASE + 0x010)
+#define AST_FMC_SW_RST_CTRL	(AST_FMC_BASE + 0x050)
 #define AST_FMC_WDT1_CTRL_MODE	(AST_FMC_BASE + 0x060)
 #define AST_FMC_WDT2_CTRL_MODE	(AST_FMC_BASE + 0x064)
 
@@ -237,6 +238,12 @@ wait_lock:
 	ldr	r1, =AST_FMC_WDT2_CTRL_MODE
 	str	r0, [r1]
 #endif
+
+	/* fill FMC50[1] for waiting WIP idle */
+	mov	r0, #0x02
+	ldr	r1, =AST_FMC_SW_RST_CTRL
+	str	r0, [r1]
+
 	/* tune up SPI clock */
 	movw	r0, #0x0600
 	movt	r0, #0x0000
