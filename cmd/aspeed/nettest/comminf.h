@@ -515,9 +515,11 @@ typedef struct {
 
 
 } MAC_Running;
+
 typedef struct {
-	int8_t                 SA[6]                         ;	
+	uint8_t SA[6];
 } MAC_Information;
+
 typedef struct {
 	uint32_t mdio_base;
 	uint32_t loopback;
