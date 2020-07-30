@@ -877,12 +877,18 @@ void mac_set_addr(MAC_ENGINE *p_eng)
 		ladr = 0xf7837dd4;
 	}
 
+	printf("%s: madr:%08x ladr:%08x\n", __func__, madr, ladr);
+
 	p_eng->inf.SA[0] = (madr >> 8) & 0xff; // MSB
 	p_eng->inf.SA[1] = (madr >> 0) & 0xff;
 	p_eng->inf.SA[2] = (ladr >> 24) & 0xff;
 	p_eng->inf.SA[3] = (ladr >> 16) & 0xff;
 	p_eng->inf.SA[4] = (ladr >> 8) & 0xff;
 	p_eng->inf.SA[5] = (ladr >> 0) & 0xff; // LSB	
+
+	printf("%s: [0]:%02x [1]:%02x\n", __func__, p_eng->inf.SA[0], p_eng->inf.SA[1]);
+	printf("%s: [2]:%02x [3]:%02x\n", __func__, p_eng->inf.SA[2], p_eng->inf.SA[3]);
+	printf("%s: [4]:%02x [5]:%02x\n", __func__, p_eng->inf.SA[4], p_eng->inf.SA[5]);
 }
 
 void mac_set_interal_loopback(MAC_ENGINE *p_eng)
@@ -1389,28 +1395,22 @@ void setup_framesize (MAC_ENGINE *eng)
 } // End void setup_framesize (void)
 
 //------------------------------------------------------------
-void setup_arp (MAC_ENGINE *eng) 
+void setup_arp(MAC_ENGINE *eng)
 {
-	int        i;
 
 	nt_log_func_name();
-	for (i = 0; i < 16; i++)
-		eng->dat.ARP_data[i] = ARP_org_data[i];
 
-	eng->dat.ARP_data[1] = 0x0000ffff | (eng->inf.SA[0] << 16) // MSB
-			       | (eng->inf.SA[1] << 24);
+	memcpy(eng->dat.ARP_data, ARP_org_data, sizeof(ARP_org_data));
 
-	eng->dat.ARP_data[2] = (eng->inf.SA[2]) | (eng->inf.SA[3] << 8) |
-			       (eng->inf.SA[4] << 16) |
-			       (eng->inf.SA[5] << 24); // LSB
-
-	eng->dat.ARP_data[5] = 0x00000100 | (eng->inf.SA[0] << 16) // MSB
-			       | (eng->inf.SA[1] << 24);
-
-	eng->dat.ARP_data[6] = (eng->inf.SA[2]) | (eng->inf.SA[3] << 8) |
-			       (eng->inf.SA[4] << 16) |
-			       (eng->inf.SA[5] << 24); // LSB
-} // End void setup_arp (MAC_ENGINE *eng)
+	eng->dat.ARP_data[1] &= ~GENMASK(31, 16);
+	eng->dat.ARP_data[1] |= (eng->inf.SA[1] << 24) | (eng->inf.SA[0] << 16);
+	eng->dat.ARP_data[2] = (eng->inf.SA[5] << 24) | (eng->inf.SA[4] << 16) |
+			       (eng->inf.SA[3] << 8) | (eng->inf.SA[2]);
+	eng->dat.ARP_data[5] &= ~GENMASK(31, 16);
+	eng->dat.ARP_data[5] |= (eng->inf.SA[1] << 24) | (eng->inf.SA[0] << 16);
+	eng->dat.ARP_data[6] = (eng->inf.SA[5] << 24) | (eng->inf.SA[4] << 16) |
+			       (eng->inf.SA[3] << 8) | (eng->inf.SA[2]);
+}
 
 //------------------------------------------------------------
 void setup_buf (MAC_ENGINE *eng) 
@@ -1439,16 +1439,14 @@ void setup_buf (MAC_ENGINE *eng)
 			for (des_num = 0; des_num < eng->dat.Des_Num; des_num++) {
 				if ( DbgPrn_BufAdr )
 					printf("[loop[%d]:%4d][des:%4d][setup_buf  ] %08x\n", eng->run.loop_of_cnt, eng->run.loop_cnt, des_num, adr_srt);
-#ifdef ENABLE_DASA
-				Write_Mem_Dat_DD( adr_srt    , 0xffffffff           );
-				Write_Mem_Dat_DD( adr_srt + 4, eng->dat.ARP_data[1] );
-				Write_Mem_Dat_DD( adr_srt + 8, eng->dat.ARP_data[2] );
+				Write_Mem_Dat_DD(adr_srt, 0xffffffff);
+				Write_Mem_Dat_DD(adr_srt + 4,
+						 eng->dat.ARP_data[1]);
+				Write_Mem_Dat_DD(adr_srt + 8,
+						 eng->dat.ARP_data[2]);
 
-				for ( adr = (adr_srt + 12); adr < (adr_srt + DMA_PakSize); adr += 4 )
-#else
-				for ( adr =  adr_srt;       adr < (adr_srt + DMA_PakSize); adr += 4 )
-#endif
-				{
+				for (adr = (adr_srt + 12);
+				     adr < (adr_srt + DMA_PakSize); adr += 4) {
 					switch (eng->arg.test_mode) {
 					case 4:
 						gdata = rand() | (rand() << 16);
@@ -1457,12 +1455,11 @@ void setup_buf (MAC_ENGINE *eng)
 						gdata = eng->arg.user_def_val;
 						break;
 					}
-					Write_Mem_Dat_DD( adr, gdata );
-				} // End for()
+					Write_Mem_Dat_DD(adr, gdata);
+				}
 				adr_srt += DMA_PakSize;
-			} // End for (des_num = 0; des_num < eng->dat.Des_Num; des_num++)
-		}
-		else {
+			}
+		} else {
 			printf("----->[ARP] 60 bytes\n");
 			for (i = 0; i < 16; i++)
 				printf("      [Tx%02d] %08x %08x\n", i, eng->dat.ARP_data[i], SWAP_4B( eng->dat.ARP_data[i] ) );

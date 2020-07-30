@@ -1447,11 +1447,13 @@ void dump_setting(MAC_ENGINE *p_eng)
 int mac_test(int argc, char * const argv[], uint32_t mode)
 {
 	MAC_ENGINE mac_eng;
-	PHY_ENGINE phy_eng;	
+	PHY_ENGINE phy_eng;
+	uint32_t ret;
 
-	if (0 != init_mac_engine(&mac_eng, mode)) {
+	ret = init_mac_engine(&mac_eng, mode);
+	if (ret) {
 		printf("init MAC engine fail\n");
-		return 1;
+		return ret;
 	}
 	
 	if (argc <= 1) {
@@ -1468,7 +1470,9 @@ int mac_test(int argc, char * const argv[], uint32_t mode)
 	else		
 		parse_arg_ncsi(argc, argv, &mac_eng);
 
-	setup_running(&mac_eng);
+	ret = setup_running(&mac_eng); 
+	if (ret)
+		return 1;
 
 	dump_setting(&mac_eng);
 
@@ -1476,7 +1480,7 @@ int mac_test(int argc, char * const argv[], uint32_t mode)
 	phy_eng.fp_set = NULL;
 	phy_eng.fp_clr = NULL;
 
-	if (mac_eng.arg.ctrl.b.rmii_50m_out && 0 == mac_eng.run.is_rgmii ) {
+	if (mac_eng.arg.ctrl.b.rmii_50m_out && 0 == mac_eng.run.is_rgmii) {
 		mac_set_rmii_50m_output_enable(&mac_eng);
 	}
 
