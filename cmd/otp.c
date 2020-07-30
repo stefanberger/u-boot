@@ -211,7 +211,7 @@ static const struct otpstrap_info a0_strap_info[] = {
 	{ 37, 1, 1, "Enable ACPI function" },
 	{ 38, 1, 0, "Enable eSPI mode" },
 	{ 38, 1, 1, "Enable LPC mode" },
-	{ 39, 1, 0, "Enable SAFS mode" },
+	{ 39, 1, 0, "Disable SAFS mode" },
 	{ 39, 1, 1, "Enable SAFS mode" },
 	{ 40, 2, OTP_REG_RESERVED, "" },
 	{ 42, 1, 0, "Disable boot SPI 3B/4B address mode auto detection" },
@@ -327,9 +327,11 @@ static const struct otpstrap_info a1_strap_info[] = {
 	{ 37, 1, 1, "Enable ACPI function" },
 	{ 38, 1, 0, "Enable eSPI mode" },
 	{ 38, 1, 1, "Enable LPC mode" },
-	{ 39, 1, 0, "Enable SAFS mode" },
+	{ 39, 1, 0, "Disable SAFS mode" },
 	{ 39, 1, 1, "Enable SAFS mode" },
-	{ 40, 2, OTP_REG_RESERVED, "" },
+	{ 40, 1, OTP_REG_RESERVED, "" },
+	{ 41, 1, 0, "Disable boot SPI 3B address mode auto-clear" },
+	{ 41, 1, 1, "Enable boot SPI 3B address mode auto-clear" },
 	{ 42, 1, 0, "Disable boot SPI 3B/4B address mode auto detection" },
 	{ 42, 1, 1, "Enable boot SPI 3B/4B address mode auto detection" },
 	{ 43, 1, 0, "Disable boot SPI ABR" },
@@ -443,9 +445,11 @@ static const struct otpstrap_info a2_strap_info[] = {
 	{ 37, 1, 1, "Enable ACPI function" },
 	{ 38, 1, 0, "Enable eSPI mode" },
 	{ 38, 1, 1, "Enable LPC mode" },
-	{ 39, 1, 0, "Enable SAFS mode" },
+	{ 39, 1, 0, "Disable SAFS mode" },
 	{ 39, 1, 1, "Enable SAFS mode" },
-	{ 40, 2, OTP_REG_RESERVED, "" },
+	{ 40, 1, OTP_REG_RESERVED, "" },
+	{ 41, 1, 0, "Disable boot SPI 3B address mode auto-clear" },
+	{ 41, 1, 1, "Enable boot SPI 3B address mode auto-clear" },
 	{ 42, 1, 0, "Disable boot SPI 3B/4B address mode auto detection" },
 	{ 42, 1, 1, "Enable boot SPI 3B/4B address mode auto detection" },
 	{ 43, 1, 0, "Disable boot SPI ABR" },
@@ -789,7 +793,7 @@ static uint32_t chip_version(void)
 
 	rev_id = readl(0x1e6e2014);
 
-	if ((rev_id >> 24) & 0xf != 0x5)
+	if (((rev_id >> 24) & 0xf) != 0x5)
 		return -1;
 
 	return (rev_id >> 16) & 0xf;
