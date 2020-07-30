@@ -877,8 +877,6 @@ void mac_set_addr(MAC_ENGINE *p_eng)
 		ladr = 0xf7837dd4;
 	}
 
-	printf("%s: madr:%08x ladr:%08x\n", __func__, madr, ladr);
-
 	p_eng->inf.SA[0] = (madr >> 8) & 0xff; // MSB
 	p_eng->inf.SA[1] = (madr >> 0) & 0xff;
 	p_eng->inf.SA[2] = (ladr >> 24) & 0xff;
@@ -886,9 +884,11 @@ void mac_set_addr(MAC_ENGINE *p_eng)
 	p_eng->inf.SA[4] = (ladr >> 8) & 0xff;
 	p_eng->inf.SA[5] = (ladr >> 0) & 0xff; // LSB	
 
-	printf("%s: [0]:%02x [1]:%02x\n", __func__, p_eng->inf.SA[0], p_eng->inf.SA[1]);
-	printf("%s: [2]:%02x [3]:%02x\n", __func__, p_eng->inf.SA[2], p_eng->inf.SA[3]);
-	printf("%s: [4]:%02x [5]:%02x\n", __func__, p_eng->inf.SA[4], p_eng->inf.SA[5]);
+	printf("mac address: ");
+	for (int i = 0; i < 6; i++) {
+		printf("%02x:", p_eng->inf.SA[i]);
+	}
+	printf("\n");
 }
 
 void mac_set_interal_loopback(MAC_ENGINE *p_eng)
