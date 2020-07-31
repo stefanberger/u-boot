@@ -283,6 +283,7 @@ static int aspeed_gpio_probe(struct udevice *dev)
 }
 
 static const struct udevice_id aspeed_gpio_ids[] = {
+	{ .compatible = "aspeed,ast2400-gpio",  },
 	{ .compatible = "aspeed,ast2500-gpio",	},
 	{ .compatible = "aspeed,ast2600-gpio",	},
 	{ }

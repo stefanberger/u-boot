@@ -1118,6 +1118,7 @@ static const struct udevice_id aspeed_spi_ids[] = {
 	{ .compatible = "aspeed,ast2600-spi", .data = 0 },
 	{ .compatible = "aspeed,ast2500-fmc", .data = 1 },
 	{ .compatible = "aspeed,ast2500-spi", .data = 0 },
+	{ .compatible = "aspeed,ast2400-fmc", .data = 1 },
 	{ }
 };
 
