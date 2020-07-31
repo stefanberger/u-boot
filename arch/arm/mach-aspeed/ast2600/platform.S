@@ -239,10 +239,17 @@ wait_lock:
 	str	r0, [r1]
 #endif
 
+	/* do not fill FMC50[1] if boot from eMMC */
+	ldr	r0, =AST_SCU_HW_STRAP1
+	ldr	r1, [r0]
+	ands	r1, #0x04
+	bne	skip_fill_wip_bit
+
 	/* fill FMC50[1] for waiting WIP idle */
 	mov	r0, #0x02
 	ldr	r1, =AST_FMC_SW_RST_CTRL
 	str	r0, [r1]
+skip_fill_wip_bit:
 
 	/* tune up SPI clock */
 	movw	r0, #0x0600
