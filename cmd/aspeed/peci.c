@@ -177,6 +177,9 @@ static int do_ast_peci_getdib(unsigned long client_addr)
 	unsigned int rec_wfcs;
 	unsigned int exp_wfcs;
 
+	unsigned int rec_rfcs;
+	unsigned int exp_rfcs;
+
 	ast_peci_init();
 
 	memset(dib, 0, sizeof(dib));
@@ -230,6 +233,15 @@ static int do_ast_peci_getdib(unsigned long client_addr)
 	if (exp_wfcs != rec_wfcs) {
 		printf("Mismatched WFCS: %02x, expected %02x\n",
 			   rec_wfcs, exp_wfcs);
+		goto getdib_clean_and_exit;
+	}
+
+	/* compare the expected RFCS and the captured one */
+	exp_rfcs = readl(AST_PECI_EXP_FCS) & 0xFF0000;
+	rec_rfcs = readl(AST_PECI_CAP_FCS) & 0xFF0000;
+	if (exp_rfcs != rec_rfcs) {
+		printf("Mismatched RFCS: %02x, expected %02x\n",
+			   rec_rfcs, exp_rfcs);
 		goto getdib_clean_and_exit;
 	}
 
