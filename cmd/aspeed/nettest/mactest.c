@@ -367,10 +367,10 @@ char finish_check(MAC_ENGINE *p_eng, int value)
 			free(p_eng->dat.wp_lst);
 	}
 
-	p_eng->flg.Err_Flag = p_eng->flg.Err_Flag | value;
+	p_eng->flg.error = p_eng->flg.error | value;
 
-	if (DbgPrn_ErrFlg)
-		printf("\nErr_Flag: [%08x]\n", p_eng->flg.Err_Flag);
+	if (DBG_PRINT_ERR_FLAG)
+		printf("flags: error = %08x\n", p_eng->flg.error);
 
 	if (!p_eng->run.tm_tx_only)
 		FPri_ErrFlag(p_eng, FP_LOG);
@@ -395,7 +395,7 @@ char finish_check(MAC_ENGINE *p_eng, int value)
 
 	finish_close(p_eng);
 
-	if (p_eng->flg.Err_Flag) {
+	if (p_eng->flg.error) {
 		return (1);
 	} else {
 		return (0);
@@ -1288,7 +1288,7 @@ uint32_t test_start(MAC_ENGINE *p_eng, PHY_ENGINE *p_phy_eng)
 				init_phy(p_eng, p_phy_eng);
 			}
 
-			if (p_eng->flg.Err_Flag)
+			if (p_eng->flg.error)
 				return (finish_check(p_eng, 0));
 		}
 
@@ -1350,7 +1350,7 @@ uint32_t test_start(MAC_ENGINE *p_eng, PHY_ENGINE *p_phy_eng)
 					// MAC Initial
 					//------------------------------
 					init_mac(p_eng);
-					if (p_eng->flg.Err_Flag)
+					if (p_eng->flg.error)
 						return (finish_check(p_eng, 0));
 
 					if (p_eng->arg.run_mode == MODE_NCSI) {
@@ -1371,10 +1371,10 @@ uint32_t test_start(MAC_ENGINE *p_eng, PHY_ENGINE *p_phy_eng)
 
 						FPri_ErrFlag(p_eng, FP_LOG);
 
-						p_eng->flg.Wrn_Flag = 0;
-						p_eng->flg.Err_Flag = 0;
-						p_eng->flg.Des_Flag = 0;
-						p_eng->flg.NCSI_Flag = 0;
+						p_eng->flg.warn = 0;
+						p_eng->flg.error = 0;
+						p_eng->flg.desc = 0;
+						p_eng->flg.ncsi = 0;
 					}
 				}
 
@@ -1393,14 +1393,14 @@ uint32_t test_start(MAC_ENGINE *p_eng, PHY_ENGINE *p_phy_eng)
 
 			FPri_ErrFlag(p_eng, STD_OUT);
 
-			wrn_flag_allspeed |= p_eng->flg.Wrn_Flag;
-			err_flag_allspeed |= p_eng->flg.Err_Flag;
-			des_flag_allspeed |= p_eng->flg.Err_Flag;
-			ncsi_flag_allspeed |= p_eng->flg.Err_Flag;
-			p_eng->flg.Wrn_Flag = 0;
-			p_eng->flg.Err_Flag = 0;
-			p_eng->flg.Des_Flag = 0;
-			p_eng->flg.NCSI_Flag = 0;
+			wrn_flag_allspeed |= p_eng->flg.warn;
+			err_flag_allspeed |= p_eng->flg.error;
+			des_flag_allspeed |= p_eng->flg.error;
+			ncsi_flag_allspeed |= p_eng->flg.error;
+			p_eng->flg.warn = 0;
+			p_eng->flg.error = 0;
+			p_eng->flg.desc = 0;
+			p_eng->flg.ncsi = 0;
 		}
 
 		if (p_eng->arg.run_mode == MODE_DEDICATED) {
@@ -1412,10 +1412,10 @@ uint32_t test_start(MAC_ENGINE *p_eng, PHY_ENGINE *p_phy_eng)
 		p_eng->flg.print_en = 0;
 	} // End for (speed = 0; speed < 3; speed++)
 
-	p_eng->flg.Wrn_Flag = wrn_flag_allspeed;
-	p_eng->flg.Err_Flag = err_flag_allspeed;
-	p_eng->flg.Des_Flag = des_flag_allspeed;
-	p_eng->flg.NCSI_Flag = ncsi_flag_allspeed;
+	p_eng->flg.warn = wrn_flag_allspeed;
+	p_eng->flg.error = err_flag_allspeed;
+	p_eng->flg.desc = des_flag_allspeed;
+	p_eng->flg.ncsi = ncsi_flag_allspeed;
 
 	return (finish_check(p_eng, 0));
 }

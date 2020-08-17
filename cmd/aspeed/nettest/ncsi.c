@@ -21,19 +21,22 @@
 #include "mac_api.h"
 
 //------------------------------------------------------------
-int FindErr_NCSI (MAC_ENGINE *eng, int value) {
-	eng->flg.NCSI_Flag = eng->flg.NCSI_Flag | value;
-	eng->flg.Err_Flag  = eng->flg.Err_Flag | Err_Flag_NCSI_LinkFail;
-	if ( DbgPrn_ErrFlg )
-		printf("\nErr_Flag: [%08x] NCSI_Flag: [%08x]\n", eng->flg.Err_Flag, eng->flg.NCSI_Flag);
+int ncsi_set_error_flag(MAC_ENGINE *eng, int eflag)
+{
+	eng->flg.ncsi = eng->flg.ncsi | eflag;
+	eng->flg.error = eng->flg.error | ERR_FLAG_NCSI_LINKFAIL;
+	if (DBG_PRINT_ERR_FLAG)
+		printf("\nflags: error = %08x, ncsi = %08x\n",
+		       eng->flg.error, eng->flg.ncsi);
 
-	return(1);
+	return (1);
 }
 
 //------------------------------------------------------------
 // PHY IC(NC-SI)
 //------------------------------------------------------------
-void ncsi_reqdump (MAC_ENGINE *eng, NCSI_Command_Packet *in) {
+void ncsi_reqdump(MAC_ENGINE *eng, NCSI_Command_Packet *in)
+{
 	int     i;
 	PRINTF( FP_LOG, "[NCSI-Request] DA             : %02x %02x %02x %02x %02x %02x\n", in->DA[ 0 ], in->DA[ 1 ], in->DA[ 2 ], in->DA[ 3 ], in->DA[ 4 ] , in->DA[ 5 ]);
 	PRINTF( FP_LOG, "[NCSI-Request] SA             : %02x %02x %02x %02x %02x %02x\n", in->SA[ 0 ], in->SA[ 1 ], in->SA[ 2 ], in->SA[ 3 ], in->SA[ 4 ] , in->SA[ 5 ]);
@@ -580,13 +583,13 @@ char NCSI_SentWaitPacket (MAC_ENGINE *eng, unsigned char command, unsigned char 
 char Clear_Initial_State_SLT (MAC_ENGINE *eng) {//Command:0x00
 	char       return_value;
 
-	eng->flg.Bak_Err_Flag  = eng->flg.Err_Flag;
-	eng->flg.Bak_NCSI_Flag = eng->flg.NCSI_Flag;
+	eng->flg.error_backup  = eng->flg.error;
+	eng->flg.ncsi_backup = eng->flg.ncsi;
 
 	return_value = NCSI_SentWaitPacket( eng, CLEAR_INITIAL_STATE, eng->ncsi_cap.All_ID, 0 );//Internal Channel ID = 0
 
-	eng->flg.Err_Flag  = eng->flg.Bak_Err_Flag;
-	eng->flg.NCSI_Flag = eng->flg.Bak_NCSI_Flag;
+	eng->flg.error  = eng->flg.error_backup;
+	eng->flg.ncsi = eng->flg.ncsi_backup;
 	return( return_value );//Internal Channel ID = 0
 }
 
@@ -595,19 +598,19 @@ char Select_Package_SLT (MAC_ENGINE *eng, char skipflag) {//Command:0x01
 	char       return_value;
 
 	if ( skipflag ) {
-		eng->flg.Bak_Err_Flag  = eng->flg.Err_Flag;
-		eng->flg.Bak_NCSI_Flag = eng->flg.NCSI_Flag;
+		eng->flg.error_backup  = eng->flg.error;
+		eng->flg.ncsi_backup = eng->flg.ncsi;
 	}
 
 	memset ((void *)eng->dat.NCSI_Payload_Data, 0, 4);
 	eng->dat.NCSI_Payload_Data[ 3 ] = 1; //Arbitration Disable
 	return_value = NCSI_SentWaitPacket( eng, SELECT_PACKAGE, ( eng->ncsi_cap.Package_ID << 5 ) + 0x1F, 4 );//Internal Channel ID = 0x1F, 0x1F means all channel
 	if ( return_value )
-		FindErr_NCSI( eng, NCSI_Flag_Select_Package );
+		ncsi_set_error_flag( eng, NCSI_Flag_Select_Package );
 
 	if ( skipflag ) {
-		eng->flg.Err_Flag  = eng->flg.Bak_Err_Flag;
-		eng->flg.NCSI_Flag = eng->flg.Bak_NCSI_Flag;
+		eng->flg.error  = eng->flg.error_backup;
+		eng->flg.ncsi = eng->flg.ncsi_backup;
 	}
 	return( return_value );
 }
@@ -618,13 +621,13 @@ void Select_Active_Package_SLT (MAC_ENGINE *eng) {//Command:0x01
 	eng->dat.NCSI_Payload_Data[ 3 ] = 1; //Arbitration Disable
 
 	if ( NCSI_SentWaitPacket( eng, SELECT_PACKAGE, ( eng->ncsi_cap.Package_ID << 5 ) + 0x1F, 4 ) ) //Internal Channel ID = 0x1F, 0x1F means all channel
-		FindErr_NCSI( eng, NCSI_Flag_Select_Active_Package );
+		ncsi_set_error_flag( eng, NCSI_Flag_Select_Active_Package );
 }
 
 //------------------------------------------------------------
 void DeSelect_Package_SLT (MAC_ENGINE *eng) {//Command:0x02
 	if ( NCSI_SentWaitPacket( eng, DESELECT_PACKAGE, ( eng->ncsi_cap.Package_ID << 5 ) + 0x1F, 0 ) ) //Internal Channel ID = 0x1F, 0x1F means all channel
-		FindErr_NCSI( eng, NCSI_Flag_Deselect_Package );
+		ncsi_set_error_flag( eng, NCSI_Flag_Deselect_Package );
 
 #ifdef NCSI_EnableDelay_DeSelectPackage
 	DELAY( Delay_DeSelectPackage );
@@ -634,37 +637,37 @@ void DeSelect_Package_SLT (MAC_ENGINE *eng) {//Command:0x02
 //------------------------------------------------------------
 void Enable_Channel_SLT (MAC_ENGINE *eng) {//Command:0x03
 	if ( NCSI_SentWaitPacket( eng, ENABLE_CHANNEL, eng->ncsi_cap.All_ID, 0 ) )
-		FindErr_NCSI( eng, NCSI_Flag_Enable_Channel );
+		ncsi_set_error_flag( eng, NCSI_Flag_Enable_Channel );
 }
 
 //------------------------------------------------------------
 void Disable_Channel_SLT (MAC_ENGINE *eng, char skipflag) {//Command:0x04
 	if ( skipflag ) {
-		eng->flg.Bak_Err_Flag  = eng->flg.Err_Flag;
-		eng->flg.Bak_NCSI_Flag = eng->flg.NCSI_Flag;
+		eng->flg.error_backup  = eng->flg.error;
+		eng->flg.ncsi_backup = eng->flg.ncsi;
 	}
 
 	memset ((void *)eng->dat.NCSI_Payload_Data, 0, 4);
 	eng->dat.NCSI_Payload_Data[ 3 ] = 0x1; //ALD
 	if ( NCSI_SentWaitPacket( eng, DISABLE_CHANNEL, eng->ncsi_cap.All_ID, 4 ) )
-		FindErr_NCSI( eng, NCSI_Flag_Disable_Channel );
+		ncsi_set_error_flag( eng, NCSI_Flag_Disable_Channel );
 
 	if ( skipflag ) {
-		eng->flg.Err_Flag  = eng->flg.Bak_Err_Flag;
-		eng->flg.NCSI_Flag = eng->flg.Bak_NCSI_Flag;
+		eng->flg.error  = eng->flg.error_backup;
+		eng->flg.ncsi = eng->flg.ncsi_backup;
 	}
 }
 
 //------------------------------------------------------------
 void Enable_Network_TX_SLT (MAC_ENGINE *eng) {//Command:0x06
 	if ( NCSI_SentWaitPacket( eng, ENABLE_CHANNEL_NETWORK_TX, eng->ncsi_cap.All_ID, 0 ) )
-		FindErr_NCSI( eng, NCSI_Flag_Enable_Network_TX );
+		ncsi_set_error_flag( eng, NCSI_Flag_Enable_Network_TX );
 }
 
 //------------------------------------------------------------
 void Disable_Network_TX_SLT (MAC_ENGINE *eng) {//Command:0x07
 	if ( NCSI_SentWaitPacket( eng, DISABLE_CHANNEL_NETWORK_TX, eng->ncsi_cap.All_ID, 0 ) )
-		FindErr_NCSI( eng, NCSI_Flag_Disable_Network_TX );
+		ncsi_set_error_flag( eng, NCSI_Flag_Disable_Network_TX );
 }
 
 //------------------------------------------------------------
@@ -675,7 +678,7 @@ void Set_Link_SLT (MAC_ENGINE *eng) {//Command:0x09
 	eng->dat.NCSI_Payload_Data[ 3 ] = 0x05; //100M, auto-enable
 
 	if ( NCSI_SentWaitPacket( eng, SET_LINK, eng->ncsi_cap.All_ID, 8 ) )
-		FindErr_NCSI( eng, NCSI_Flag_Set_Link );
+		ncsi_set_error_flag( eng, NCSI_Flag_Set_Link );
 }
 
 //------------------------------------------------------------
@@ -719,7 +722,7 @@ void Enable_Set_MAC_Address_SLT (MAC_ENGINE *eng)
 		eng->dat.NCSI_Payload_Data[ 7 ] = UNICAST   + ENABLE_MAC_ADDRESS_FILTER; //AT + E
 
 	if ( NCSI_SentWaitPacket( eng, SET_MAC_ADDRESS, eng->ncsi_cap.All_ID, 8 ) )
-		FindErr_NCSI( eng, NCSI_Flag_Enable_Set_MAC_Address );
+		ncsi_set_error_flag( eng, NCSI_Flag_Enable_Set_MAC_Address );
 }
 
 //------------------------------------------------------------
@@ -728,13 +731,13 @@ void Enable_Broadcast_Filter_SLT (MAC_ENGINE *eng) {//Command:0x10
 	eng->dat.NCSI_Payload_Data[ 3 ] = 0xF; //ARP, DHCP, NetBIOS
 
 	if ( NCSI_SentWaitPacket( eng, ENABLE_BROADCAST_FILTERING, eng->ncsi_cap.All_ID, 4 ) )
-		FindErr_NCSI( eng, NCSI_Flag_Enable_Broadcast_Filter );
+		ncsi_set_error_flag( eng, NCSI_Flag_Enable_Broadcast_Filter );
 }
 
 //------------------------------------------------------------
 void Get_Version_ID_SLT (MAC_ENGINE *eng) {//Command:0x15
 	if ( NCSI_SentWaitPacket( eng, GET_VERSION_ID, eng->ncsi_cap.All_ID, 0 ) )
-		FindErr_NCSI( eng, NCSI_Flag_Get_Version_ID );
+		ncsi_set_error_flag( eng, NCSI_Flag_Get_Version_ID );
 	else {
 #ifdef Print_Version_ID
 		printf("NCSI Version        : %02x %02x %02x %02x\n", eng->ncsi_rsp.Payload_Data[  0 ], eng->ncsi_rsp.Payload_Data[  1 ], eng->ncsi_rsp.Payload_Data[  2 ], eng->ncsi_rsp.Payload_Data[  3 ]);
@@ -762,7 +765,7 @@ void Get_Version_ID_SLT (MAC_ENGINE *eng) {//Command:0x15
 //------------------------------------------------------------
 void Get_Capabilities_SLT (MAC_ENGINE *eng) {//Command:0x16
 	if ( NCSI_SentWaitPacket( eng, GET_CAPABILITIES, eng->ncsi_cap.All_ID, 0 ) )
-		FindErr_NCSI( eng, NCSI_Flag_Get_Capabilities );
+		ncsi_set_error_flag( eng, NCSI_Flag_Get_Capabilities );
 	else {
 //		eng->ncsi_cap.Capabilities_Flags                   = (eng->ncsi_rsp.Payload_Data[  0 ]<<24)
 //		                                                   | (eng->ncsi_rsp.Payload_Data[  1 ]<<16)
@@ -796,7 +799,7 @@ void Get_Capabilities_SLT (MAC_ENGINE *eng) {//Command:0x16
 //------------------------------------------------------------
 void Get_Controller_Packet_Statistics_SLT (MAC_ENGINE *eng) {//Command:0x18
 	if ( NCSI_SentWaitPacket( eng, GET_CONTROLLER_PACKET_STATISTICS, eng->ncsi_cap.All_ID, 0 ) )
-		FindErr_NCSI( eng, NCSI_Flag_Get_Controller_Packet_Statistics );
+		ncsi_set_error_flag( eng, NCSI_Flag_Get_Controller_Packet_Statistics );
 }
 
 //------------------------------------------------------------
@@ -960,14 +963,14 @@ char phy_ncsi (MAC_ENGINE *eng)
 	if ( eng->dat.number_chl != eng->arg.GChannelTolNum ) FindErr( eng, Err_Flag_NCSI_Channel_Num );
 //	if ( eng->dat.number_chl == 0                       ) FindErr( eng );
 
-	if ( eng->flg.Err_Flag ) {
+	if ( eng->flg.error ) {
 		if ( eng->dat.NCSI_RxEr )
 			FindErr_Des( eng, Des_Flag_RxErr );
 		return(1);
 	}
 	else {
 		if ( eng->dat.NCSI_RxEr ) {
-			eng->flg.Wrn_Flag = eng->flg.Wrn_Flag | Wrn_Flag_RxErFloatting;
+			eng->flg.warn = eng->flg.warn | Wrn_Flag_RxErFloatting;
 			if ( eng->arg.ctrl.b.skip_rx_err ) {
 				eng->flg.all_fail = 0;
 				return(0);
