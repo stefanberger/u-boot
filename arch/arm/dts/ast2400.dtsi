@@ -212,7 +212,7 @@
 
 			sram@1e720000 {
 				compatible = "mmio-sram";
-				reg = <0x1e720000 0x9000>;	// 36K
+				reg = <0x1e720000 0x8000>;	// 36K
 			};
 
 			sdhci: sdhci@1e740000 {
@@ -255,8 +255,8 @@
 				compatible = "aspeed,ast2400-gpio";
 				reg = <0x1e780000 0x1000>;
 				interrupts = <20>;
-				gpio-ranges = <&pinctrl 0 0 220>;
-				ngpios = <228>;
+				gpio-ranges = <&pinctrl 0 0 216>;
+				ngpios = <216>;
 				interrupt-controller;
 			};
 
@@ -298,12 +298,6 @@
 				compatible = "aspeed,wdt";
 				reg = <0x1e785020 0x1c>;
 				interrupts = <27>;
-				status = "disabled";
-			};
-
-			wdt3: watchdog@1e785040 {
-				compatible = "aspeed,wdt";
-				reg = <0x1e785040 0x1c>;
 				status = "disabled";
 			};
 
