@@ -34,6 +34,9 @@
 
 #define D2PLL_DEFAULT_RATE	(250 * 1000 * 1000)
 
+
+#define CHIP_REVISION_ID GENMASK(23, 16)
+
 DECLARE_GLOBAL_DATA_PTR;
 
 /*
@@ -152,21 +155,39 @@ extern u32 ast2600_get_pll_rate(struct ast2600_scu *scu, int pll_idx)
 
 extern u32 ast2600_get_apll_rate(struct ast2600_scu *scu)
 {
+	u32 hw_rev = readl(&scu->chip_id1);
 	u32 clkin = AST2600_CLK_IN;
 	u32 apll_reg = readl(&scu->a_pll_param);
 	unsigned int mult, div = 1;
 
-	if (apll_reg & BIT(20)) {
-		/* Pass through mode */
-		mult = div = 1;
-	} else {
-		/* F = 25Mhz * (2-od) * [(m + 2) / (n + 1)] */
-		u32 m = (apll_reg >> 5) & 0x3f;
-		u32 od = (apll_reg >> 4) & 0x1;
-		u32 n = apll_reg & 0xf;
+	if (((hw_rev & CHIP_REVISION_ID) >> 16) == 3) {
+		//ast2600a2
+		if (apll_reg & BIT(24)) {
+			/* Pass through mode */
+			mult = div = 1;
+		} else {
+			/* F = 25Mhz * [(m + 1) / (n + 1)] / (p + 1) */
+			u32 m = apll_reg & 0x1fff;
+			u32 n = (apll_reg >> 13) & 0x3f;
+			u32 p = (apll_reg >> 19) & 0xf;
 
-		mult = (2 - od) * (m + 2);
-		div = n + 1;
+			mult = (m + 1);
+			div = (n + 1) * (p + 1);
+		}
+		
+	} else {
+		if (apll_reg & BIT(20)) {
+			/* Pass through mode */
+			mult = div = 1;
+		} else {
+			/* F = 25Mhz * (2-od) * [(m + 2) / (n + 1)] */
+			u32 m = (apll_reg >> 5) & 0x3f;
+			u32 od = (apll_reg >> 4) & 0x1;
+			u32 n = apll_reg & 0xf;
+
+			mult = (2 - od) * (m + 2);
+			div = n + 1;
+		}
 	}
 	return ((clkin * mult)/div);
 }
@@ -189,13 +210,13 @@ static u32 ast2600_a1_axi_ahb_default_table[] = {
 
 static u32 ast2600_get_hclk(struct ast2600_scu *scu)
 {
-	u32 hw_rev = readl(&scu->chip_id0);
+	u32 hw_rev = readl(&scu->chip_id1);
 	u32 hwstrap1 = readl(&scu->hwstrap1.hwstrap);
 	u32 axi_div = 1;
 	u32 ahb_div = 0;
 	u32 rate = 0;
 
-	if (hw_rev & BIT(16)) {
+	if ((hw_rev & CHIP_REVISION_ID) >> 16) {
 		//ast2600a1
 		if(hwstrap1 & BIT(16)) {
 			ast2600_a1_axi_ahb_div1_table[0] = ast2600_a1_axi_ahb_default_table[(hwstrap1 >> 8) & 0x3];
@@ -949,7 +970,7 @@ static ulong ast2600_enable_emmcclk(struct ast2600_scu *scu)
 
 static ulong ast2600_enable_extemmcclk(struct ast2600_scu *scu)
 {
-	u32 revision_id = readl(&scu->chip_id0);
+	u32 revision_id = readl(&scu->chip_id1);
 	u32 clk_sel = readl(&scu->clk_sel1);
 	u32 enableclk_bit;
 	u32 rate = 0;
@@ -966,7 +987,7 @@ static ulong ast2600_enable_extemmcclk(struct ast2600_scu *scu)
 						/
 		MPLL - ----- ->
 	*********************************************************************************************/
-	if(((revision_id & GENMASK(23, 16)) >> 16)) {
+	if(((revision_id & CHIP_REVISION_ID) >> 16)) {
 		//AST2600A1 : use mpll to be clk source
 		rate = ast2600_get_pll_rate(scu, ASPEED_CLK_MPLL);
 		for(i = 0; i < 8; i++) {
