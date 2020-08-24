@@ -673,7 +673,7 @@ static void calc_loop_check_num(MAC_ENGINE *p_eng)
 		     (((p_eng->dat.Des_Num * DMA_PakSize) >> 20) + 1));
 	}
 }
-
+static uint32_t setup_interface(MAC_ENGINE *p_eng);
 static uint32_t setup_running(MAC_ENGINE *p_eng)
 {
 	uint32_t n_desp_min;
@@ -688,6 +688,43 @@ static uint32_t setup_running(MAC_ENGINE *p_eng)
 	p_eng->run.mdio_base = mdio_base_lookup_tbl[p_eng->run.mdio_idx];
 
 	p_eng->run.is_rgmii = p_eng->env.is_1g_valid[p_eng->run.mac_idx];
+
+	if (p_eng->arg.run_mode == MODE_NCSI) {
+#ifdef CONFIG_ASPEED_AST2600
+		/**
+		 * NCSI needs for 3.3V IO voltage but MAC#1 & MAC#2 only
+		 * support 1.8V. So NCSI can only runs on MAC#3 or MAC#4
+		 */
+		if (p_eng->run.mac_idx < 2) {
+			printf("\nNCSI must runs on MAC#3 or MAC#4\n");
+			return 1;
+		}
+
+		if (p_eng->run.is_rgmii) {
+			hw_strap2_t strap2;
+			
+			printf("\nNCSI must be RMII interface, force the strap value:\n");
+			printf("\nbefore: SCU510=%08x\n", SCU_RD(0x510));
+			strap2.w = 0;
+			if (p_eng->run.mac_idx == 2) {
+				strap2.b.mac3_interface = 1;
+			} else if (p_eng->run.mac_idx == 3) {
+				strap2.b.mac4_interface = 1;
+			}
+			SCU_WR(strap2.w, 0x514);
+			while (SCU_RD(0x510) & strap2.w);
+			printf("\nafter: SCU510=%08x\n", SCU_RD(0x510));
+			/* update interface setting */
+			setup_interface(p_eng);
+			p_eng->run.is_rgmii = p_eng->env.is_1g_valid[p_eng->run.mac_idx];
+		}
+#else
+		if (p_eng->run.is_rgmii) {
+			printf("\nNCSI must be RMII interface\n");
+			return 1;
+		}
+#endif
+	}
 
 	/* 
 	 * FIXME: too ugly...
@@ -800,25 +837,6 @@ static uint32_t setup_running(MAC_ENGINE *p_eng)
 
 	if (!p_eng->env.is_1g_valid[p_eng->run.mac_idx])
 		p_eng->run.speed_cfg[ 0 ] = 0;
-
-
-	if (p_eng->arg.run_mode == MODE_NCSI) {
-		if (p_eng->run.is_rgmii) {
-			printf("\nNCSI must be RMII interface !!!\n");
-			return (finish_check(p_eng, Err_Flag_MACMode));	
-		}
-
-#ifdef CONFIG_ASPEED_AST2600
-		/**
-		 * NCSI needs for 3.3V IO voltage but MAC#1 & MAC#2 only
-		 * support 1.8V. So NCSI can only runs on MAC#3 or MAC#4
-		 */
-		if (p_eng->run.mac_idx < 2) {
-			printf("\nNCSI must runs on MAC#3 or MAC#4\n");
-			return (finish_check(p_eng, Err_Flag_MACMode));	
-		}
-#endif		
-	}
 	
 	p_eng->run.tdes_base = (uint32_t)(&tdes_buf[0]);
 	p_eng->run.rdes_base = (uint32_t)(&rdes_buf[0]);
