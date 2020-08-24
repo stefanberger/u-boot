@@ -726,45 +726,9 @@ static uint32_t setup_running(MAC_ENGINE *p_eng)
 #endif
 	}
 
-	/* 
-	 * FIXME: too ugly...
-	 * check if legal speed setup
-	 * */
-	switch (p_eng->arg.run_speed) {
-	case SET_1GBPS:
-		p_eng->run.speed_cfg[0] = 1;
-		p_eng->run.speed_cfg[1] = 0;
-		p_eng->run.speed_cfg[2] = 0;
-		if (0 == p_eng->env.is_1g_valid[p_eng->run.mac_idx]) {
-			printf("MAC%d doesn't support 1G\n",
-			       p_eng->run.mac_idx);
-			return 1;
-		}
-		break;
-	case SET_100MBPS:
-		p_eng->run.speed_cfg[0] = 0;
-		p_eng->run.speed_cfg[1] = 1;
-		p_eng->run.speed_cfg[2] = 0;
-		break;
-	case SET_10MBPS:
-		p_eng->run.speed_cfg[0] = 0;
-		p_eng->run.speed_cfg[1] = 0;
-		p_eng->run.speed_cfg[2] = 1;
-		break;
-	case SET_1G_100M_10MBPS:
-		p_eng->run.speed_cfg[0] = 1;
-		p_eng->run.speed_cfg[1] = 1;
-		p_eng->run.speed_cfg[2] = 1;
-		break;
-	case SET_100M_10MBPS:
-		p_eng->run.speed_cfg[0] = 0;
-		p_eng->run.speed_cfg[1] = 1;
-		p_eng->run.speed_cfg[2] = 1;
-		break;
-	default:
-		printf("Error speed!!!\n");
-		print_arg_speed(p_eng);
-		return (1);
+	for (i = 0; i < 3; i++) {
+		if (p_eng->arg.run_speed & (1 << i))
+			p_eng->run.speed_cfg[i] = 1;
 	}	
 
 	if (p_eng->arg.run_mode == MODE_NCSI) {
