@@ -334,11 +334,13 @@ void get_mac4_rmii_delay(MAC_ENGINE *p_eng, int32_t *p_rx_d, int32_t *p_tx_d)
 {
 	get_mac_rmii_delay_2(p_eng->io.mac34_1g_delay.addr, p_rx_d, p_tx_d);
 }
+#if !defined(CONFIG_ASPEED_AST2600)
 static
 void get_dummy_delay(MAC_ENGINE *p_eng, int32_t *p_rx_d, int32_t *p_tx_d)
 {
 	debug("%s\n", __func__);
 }
+#endif
 
 /**
  * @brief function pointer table to get current delay setting
@@ -1653,10 +1655,11 @@ char check_Data (MAC_ENGINE *eng, uint32_t datbase, int32_t number)
 //------------------------------------------------------------
 char check_buf (MAC_ENGINE *eng, int loopcnt) 
 {
-	int32_t       des_num;
-	uint32_t      desadr;
-	uint32_t      datbase;
-
+	int32_t des_num;
+	uint32_t desadr;
+#ifdef CHECK_RX_DATA
+	uint32_t datbase;
+#endif
 	nt_log_func_name();
 
 	desadr = eng->run.rdes_base + (16 * eng->dat.Des_Num) - 4;
@@ -2269,7 +2272,8 @@ char TestingLoop (MAC_ENGINE *eng, uint32_t loop_checknum)
 		eng->dat.DMA_Base_Rx =
 		    ZeroCopy_OFFSET + GET_DMA_BASE(eng, eng->run.loop_cnt + 1);
 		//[Check DES]--------------------
-		if (ret = check_des(eng, eng->run.loop_cnt, checken)) {
+		ret = check_des(eng, eng->run.loop_cnt, checken);
+		if (ret) {
 			//descriptor error
 			eng->dat.Des_Num = eng->flg.n_desc_fail + 1;
 #ifdef CheckRxBuf
