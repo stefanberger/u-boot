@@ -178,7 +178,6 @@ static void print_arg_delay_scan_range(MAC_ENGINE *p_eng)
 	printf("%20s| 1/2/3/... (default:%d) only for test_mode 0\n", item,
 	       DEF_GIOTIMINGBUND);
 	printf("%20s| check range = (orig - margin) ~ (orig + margin)\n", "");
-	print_arg_ieee_select(p_eng);
 }
 
 static void print_arg_channel_num(MAC_ENGINE *p_eng) 
@@ -286,9 +285,10 @@ static void print_usage(MAC_ENGINE *p_eng)
 		print_arg_test_mode(p_eng);
 		print_arg_phy_addr(p_eng);
 		print_arg_delay_scan_range(p_eng);
+		print_arg_ieee_select(p_eng);
 	} else if (MODE_NCSI == p_eng->arg.run_mode) {
-		printf("ncsitest <idx> <packet num> <channel num> <test mode>"
-		       "<margin> <ctrl> <ARP num>\n");
+		printf("ncsitest <idx> <packet num> <channel num> <test mode> "
+		       "<margin> <ctrl>\n");
 		print_arg_mac_idx(p_eng);
 		print_arg_package_num(p_eng);
 		print_arg_channel_num(p_eng);
@@ -730,7 +730,7 @@ static uint32_t setup_running(MAC_ENGINE *p_eng)
 	for (i = 0; i < 3; i++) {
 		if (p_eng->arg.run_speed & (1 << i))
 			p_eng->run.speed_cfg[i] = 1;
-	}	
+	}
 
 	if (p_eng->arg.run_mode == MODE_NCSI) {
 		/*
@@ -1145,7 +1145,6 @@ static uint32_t parse_arg_ncsi(int argc, char *const argv[], MAC_ENGINE *p_eng)
 		p_eng->arg.GARPNumCnt = simple_strtol(argv[7], NULL, 10);
 	case 7:
 		p_eng->arg.ctrl.w = simple_strtol(argv[6], NULL, 16);
-		printf("ctrl=0x%02x\n", p_eng->arg.ctrl.w);
 	case 6:
 		p_eng->arg.delay_scan_range = simple_strtol(argv[5], NULL, 10);		
 	case 5:
