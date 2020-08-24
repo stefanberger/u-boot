@@ -175,7 +175,7 @@
 #define Err_Flag_MALLOC_LastWP                        ( 1 <<  3 )   // Malloc fail at last WP buffer
 #define Err_Flag_Check_Buf_Data                       ( 1 <<  4 )   // Received data mismatch
 #define Err_Flag_Check_Des                            ( 1 <<  5 )   // Descriptor error
-#define Err_Flag_NCSI_LinkFail                        ( 1 <<  6 )   // NCSI packet retry number over flows
+#define ERR_FLAG_NCSI_LINKFAIL			(1 << 6)	// NCSI packet retry number over flows
 #define Err_Flag_NCSI_Check_TxOwnTimeOut              ( 1 <<  7 )   // Time out of checking Tx owner bit in NCSI packet
 #define Err_Flag_NCSI_Check_RxOwnTimeOut              ( 1 <<  8 )   // Time out of checking Rx owner bit in NCSI packet
 #define Err_Flag_NCSI_Check_ARPOwnTimeOut             ( 1 <<  9 )   // Time out of checking ARP owner bit in NCSI packet
@@ -430,9 +430,9 @@ typedef struct {
 typedef union {
 	uint32_t w;
 	struct {
-		uint32_t phy_skip_init	: 1;	/* bit[0] */
-		uint32_t phy_skip_deinit: 1;	/* bit[1] */
-		uint32_t phy_skip_check	: 1;	/* bit[2] */
+		uint32_t skip_phy_init	: 1;	/* bit[0] */
+		uint32_t skip_phy_deinit: 1;	/* bit[1] */
+		uint32_t skip_phy_id_check	: 1;	/* bit[2] */
 		uint32_t reserved_0	: 1;	/* bit[3] */
 		uint32_t phy_int_loopback : 1;	/* bit[4] */
 		uint32_t mac_int_loopback : 1;	/* bit[5] */
@@ -515,9 +515,11 @@ typedef struct {
 
 
 } MAC_Running;
+
 typedef struct {
-	int8_t                 SA[6]                         ;	
+	uint8_t SA[6];
 } MAC_Information;
+
 typedef struct {
 	uint32_t mdio_base;
 	uint32_t loopback;
@@ -525,8 +527,8 @@ typedef struct {
 	int8_t                 default_phy                   ;
 	int8_t                 Adr                           ;
 
-	uint32_t PHY_ID3                       ;
-	uint32_t PHY_ID2                       ;
+	uint16_t id2                       ;
+	uint16_t id1                       ;
 
 	uint32_t PHY_00h                       ;
 	uint32_t PHY_06h                       ;
@@ -692,10 +694,6 @@ typedef struct {
 	delay_scan_t tx_delay_scan;
 	delay_scan_t rx_delay_scan;	
 
-	char                 Dly_reg_name_tx[32];
-	char                 Dly_reg_name_rx[32];
-	char                 Dly_reg_name_tx_new[32];
-	char                 Dly_reg_name_rx_new[32];
 	uint8_t                 Dly_in_reg_idx;
 	int8_t                Dly_in_min                    ;
 	uint8_t                 Dly_in_max                    ;
@@ -745,17 +743,19 @@ typedef struct {
 	unsigned char        NCSI_Payload_Data[16]         ;
 	uint32_t Payload_Checksum_NCSI         ;
 } MAC_Data;
+
 typedef struct {
-	uint32_t Wrn_Flag                      ;
-	uint32_t Err_Flag                      ;
-	uint32_t Des_Flag                      ;
-	uint32_t NCSI_Flag                     ;
-	uint32_t Bak_Err_Flag                  ;
-	uint32_t Bak_NCSI_Flag                 ;
-	uint32_t CheckDesFail_DesNum           ;
+	uint32_t warn;
+	uint32_t error;
+	uint32_t desc;
+	uint32_t ncsi;
+	uint32_t error_backup;
+	uint32_t ncsi_backup;
+	uint32_t n_desc_fail;
 	uint8_t print_en;
 	uint8_t all_fail;
 } MAC_Flag;
+
 typedef struct {
 	mac_reg_t reg;
 	mac_env_t env;
@@ -861,7 +861,7 @@ GLOBAL char TestingLoop (MAC_ENGINE *eng, uint32_t loop_checknum);
 GLOBAL void    init_phy (MAC_ENGINE *eng, PHY_ENGINE *phyeng);
 
 
-GLOBAL void    phy_sel (MAC_ENGINE *eng, PHY_ENGINE *phyeng);
+GLOBAL void    phy_select (MAC_ENGINE *eng, PHY_ENGINE *phyeng);
 GLOBAL void    recov_phy (MAC_ENGINE *eng, PHY_ENGINE *phyeng);
 GLOBAL int     FindErr (MAC_ENGINE *eng, int value);
 GLOBAL int     FindErr_Des (MAC_ENGINE *eng, int value);

@@ -22,7 +22,6 @@
 // --------------------------------------------------------------
 // Define
 // --------------------------------------------------------------
-#define ENABLE_DASA                    //[ON]
 //#define Enable_MAC_SWRst               //[off]
 #define   Enable_No_IOBoundary         //[ON]
 //#define Enable_Dual_Mode               //[off]

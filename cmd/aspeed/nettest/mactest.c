@@ -178,7 +178,6 @@ static void print_arg_delay_scan_range(MAC_ENGINE *p_eng)
 	printf("%20s| 1/2/3/... (default:%d) only for test_mode 0\n", item,
 	       DEF_GIOTIMINGBUND);
 	printf("%20s| check range = (orig - margin) ~ (orig + margin)\n", "");
-	print_arg_ieee_select(p_eng);
 }
 
 static void print_arg_channel_num(MAC_ENGINE *p_eng) 
@@ -286,9 +285,10 @@ static void print_usage(MAC_ENGINE *p_eng)
 		print_arg_test_mode(p_eng);
 		print_arg_phy_addr(p_eng);
 		print_arg_delay_scan_range(p_eng);
+		print_arg_ieee_select(p_eng);
 	} else if (MODE_NCSI == p_eng->arg.run_mode) {
-		printf("ncsitest <idx> <packet num> <channel num> <test mode>"
-		       "<margin> <ctrl> <ARP num>\n");
+		printf("ncsitest <idx> <packet num> <channel num> <test mode> "
+		       "<margin> <ctrl>\n");
 		print_arg_mac_idx(p_eng);
 		print_arg_package_num(p_eng);
 		print_arg_channel_num(p_eng);
@@ -367,10 +367,10 @@ char finish_check(MAC_ENGINE *p_eng, int value)
 			free(p_eng->dat.wp_lst);
 	}
 
-	p_eng->flg.Err_Flag = p_eng->flg.Err_Flag | value;
+	p_eng->flg.error = p_eng->flg.error | value;
 
-	if (DbgPrn_ErrFlg)
-		printf("\nErr_Flag: [%08x]\n", p_eng->flg.Err_Flag);
+	if (DBG_PRINT_ERR_FLAG)
+		printf("flags: error = %08x\n", p_eng->flg.error);
 
 	if (!p_eng->run.tm_tx_only)
 		FPri_ErrFlag(p_eng, FP_LOG);
@@ -395,7 +395,7 @@ char finish_check(MAC_ENGINE *p_eng, int value)
 
 	finish_close(p_eng);
 
-	if (p_eng->flg.Err_Flag) {
+	if (p_eng->flg.error) {
 		return (1);
 	} else {
 		return (0);
@@ -677,6 +677,7 @@ static uint32_t setup_interface(MAC_ENGINE *p_eng);
 static uint32_t setup_running(MAC_ENGINE *p_eng)
 {
 	uint32_t n_desp_min;
+	int i;
 
 	if (0 != check_mac_idx(p_eng)) {
 		return 1;
@@ -726,46 +727,10 @@ static uint32_t setup_running(MAC_ENGINE *p_eng)
 #endif
 	}
 
-	/* 
-	 * FIXME: too ugly...
-	 * check if legal speed setup
-	 * */
-	switch (p_eng->arg.run_speed) {
-	case SET_1GBPS:
-		p_eng->run.speed_cfg[0] = 1;
-		p_eng->run.speed_cfg[1] = 0;
-		p_eng->run.speed_cfg[2] = 0;
-		if (0 == p_eng->env.is_1g_valid[p_eng->run.mac_idx]) {
-			printf("MAC%d doesn't support 1G\n",
-			       p_eng->run.mac_idx);
-			return 1;
-		}
-		break;
-	case SET_100MBPS:
-		p_eng->run.speed_cfg[0] = 0;
-		p_eng->run.speed_cfg[1] = 1;
-		p_eng->run.speed_cfg[2] = 0;
-		break;
-	case SET_10MBPS:
-		p_eng->run.speed_cfg[0] = 0;
-		p_eng->run.speed_cfg[1] = 0;
-		p_eng->run.speed_cfg[2] = 1;
-		break;
-	case SET_1G_100M_10MBPS:
-		p_eng->run.speed_cfg[0] = 1;
-		p_eng->run.speed_cfg[1] = 1;
-		p_eng->run.speed_cfg[2] = 1;
-		break;
-	case SET_100M_10MBPS:
-		p_eng->run.speed_cfg[0] = 0;
-		p_eng->run.speed_cfg[1] = 1;
-		p_eng->run.speed_cfg[2] = 1;
-		break;
-	default:
-		printf("Error speed!!!\n");
-		print_arg_speed(p_eng);
-		return (1);
-	}	
+	for (i = 0; i < 3; i++) {
+		if (p_eng->arg.run_speed & (1 << i))
+			p_eng->run.speed_cfg[i] = 1;
+	}
 
 	if (p_eng->arg.run_mode == MODE_NCSI) {
 		/*
@@ -864,7 +829,7 @@ static uint32_t setup_running(MAC_ENGINE *p_eng)
 	if (p_eng->arg.run_mode == MODE_DEDICATED) {
 		n_desp_min = p_eng->run.TM_IOTiming;
 
-		if (p_eng->arg.ctrl.b.phy_skip_check &&
+		if (p_eng->arg.ctrl.b.skip_phy_id_check &&
 		    (p_eng->arg.test_mode == 0))
 			/* for SMSC's LAN9303 issue */
 			p_eng->dat.Des_Num = 114;
@@ -1180,7 +1145,6 @@ static uint32_t parse_arg_ncsi(int argc, char *const argv[], MAC_ENGINE *p_eng)
 		p_eng->arg.GARPNumCnt = simple_strtol(argv[7], NULL, 10);
 	case 7:
 		p_eng->arg.ctrl.w = simple_strtol(argv[6], NULL, 16);
-		printf("ctrl=0x%02x\n", p_eng->arg.ctrl.w);
 	case 6:
 		p_eng->arg.delay_scan_range = simple_strtol(argv[5], NULL, 10);		
 	case 5:
@@ -1288,7 +1252,7 @@ uint32_t test_start(MAC_ENGINE *p_eng, PHY_ENGINE *p_phy_eng)
 				init_phy(p_eng, p_phy_eng);
 			}
 
-			if (p_eng->flg.Err_Flag)
+			if (p_eng->flg.error)
 				return (finish_check(p_eng, 0));
 		}
 
@@ -1350,7 +1314,7 @@ uint32_t test_start(MAC_ENGINE *p_eng, PHY_ENGINE *p_phy_eng)
 					// MAC Initial
 					//------------------------------
 					init_mac(p_eng);
-					if (p_eng->flg.Err_Flag)
+					if (p_eng->flg.error)
 						return (finish_check(p_eng, 0));
 
 					if (p_eng->arg.run_mode == MODE_NCSI) {
@@ -1371,10 +1335,10 @@ uint32_t test_start(MAC_ENGINE *p_eng, PHY_ENGINE *p_phy_eng)
 
 						FPri_ErrFlag(p_eng, FP_LOG);
 
-						p_eng->flg.Wrn_Flag = 0;
-						p_eng->flg.Err_Flag = 0;
-						p_eng->flg.Des_Flag = 0;
-						p_eng->flg.NCSI_Flag = 0;
+						p_eng->flg.warn = 0;
+						p_eng->flg.error = 0;
+						p_eng->flg.desc = 0;
+						p_eng->flg.ncsi = 0;
 					}
 				}
 
@@ -1393,14 +1357,14 @@ uint32_t test_start(MAC_ENGINE *p_eng, PHY_ENGINE *p_phy_eng)
 
 			FPri_ErrFlag(p_eng, STD_OUT);
 
-			wrn_flag_allspeed |= p_eng->flg.Wrn_Flag;
-			err_flag_allspeed |= p_eng->flg.Err_Flag;
-			des_flag_allspeed |= p_eng->flg.Err_Flag;
-			ncsi_flag_allspeed |= p_eng->flg.Err_Flag;
-			p_eng->flg.Wrn_Flag = 0;
-			p_eng->flg.Err_Flag = 0;
-			p_eng->flg.Des_Flag = 0;
-			p_eng->flg.NCSI_Flag = 0;
+			wrn_flag_allspeed |= p_eng->flg.warn;
+			err_flag_allspeed |= p_eng->flg.error;
+			des_flag_allspeed |= p_eng->flg.error;
+			ncsi_flag_allspeed |= p_eng->flg.error;
+			p_eng->flg.warn = 0;
+			p_eng->flg.error = 0;
+			p_eng->flg.desc = 0;
+			p_eng->flg.ncsi = 0;
 		}
 
 		if (p_eng->arg.run_mode == MODE_DEDICATED) {
@@ -1412,10 +1376,10 @@ uint32_t test_start(MAC_ENGINE *p_eng, PHY_ENGINE *p_phy_eng)
 		p_eng->flg.print_en = 0;
 	} // End for (speed = 0; speed < 3; speed++)
 
-	p_eng->flg.Wrn_Flag = wrn_flag_allspeed;
-	p_eng->flg.Err_Flag = err_flag_allspeed;
-	p_eng->flg.Des_Flag = des_flag_allspeed;
-	p_eng->flg.NCSI_Flag = ncsi_flag_allspeed;
+	p_eng->flg.warn = wrn_flag_allspeed;
+	p_eng->flg.error = err_flag_allspeed;
+	p_eng->flg.desc = des_flag_allspeed;
+	p_eng->flg.ncsi = ncsi_flag_allspeed;
 
 	return (finish_check(p_eng, 0));
 }
@@ -1447,11 +1411,13 @@ void dump_setting(MAC_ENGINE *p_eng)
 int mac_test(int argc, char * const argv[], uint32_t mode)
 {
 	MAC_ENGINE mac_eng;
-	PHY_ENGINE phy_eng;	
+	PHY_ENGINE phy_eng;
+	uint32_t ret;
 
-	if (0 != init_mac_engine(&mac_eng, mode)) {
+	ret = init_mac_engine(&mac_eng, mode);
+	if (ret) {
 		printf("init MAC engine fail\n");
-		return 1;
+		return ret;
 	}
 	
 	if (argc <= 1) {
@@ -1468,7 +1434,9 @@ int mac_test(int argc, char * const argv[], uint32_t mode)
 	else		
 		parse_arg_ncsi(argc, argv, &mac_eng);
 
-	setup_running(&mac_eng);
+	ret = setup_running(&mac_eng); 
+	if (ret)
+		return 1;
 
 	dump_setting(&mac_eng);
 
@@ -1476,7 +1444,7 @@ int mac_test(int argc, char * const argv[], uint32_t mode)
 	phy_eng.fp_set = NULL;
 	phy_eng.fp_clr = NULL;
 
-	if (mac_eng.arg.ctrl.b.rmii_50m_out && 0 == mac_eng.run.is_rgmii ) {
+	if (mac_eng.arg.ctrl.b.rmii_50m_out && 0 == mac_eng.run.is_rgmii) {
 		mac_set_rmii_50m_output_enable(&mac_eng);
 	}
 
@@ -1493,7 +1461,7 @@ int mac_test(int argc, char * const argv[], uint32_t mode)
 	scu_enable_mac(&mac_eng);
 	if (mac_eng.arg.run_mode == MODE_DEDICATED) {
 		if (1 == phy_find_addr(&mac_eng)) {
-			phy_sel(&mac_eng, &phy_eng);		
+			phy_select(&mac_eng, &phy_eng);		
 		}
 	}
 

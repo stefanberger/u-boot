@@ -334,11 +334,13 @@ void get_mac4_rmii_delay(MAC_ENGINE *p_eng, int32_t *p_rx_d, int32_t *p_tx_d)
 {
 	get_mac_rmii_delay_2(p_eng->io.mac34_1g_delay.addr, p_rx_d, p_tx_d);
 }
+#if !defined(CONFIG_ASPEED_AST2600)
 static
 void get_dummy_delay(MAC_ENGINE *p_eng, int32_t *p_rx_d, int32_t *p_tx_d)
 {
 	debug("%s\n", __func__);
 }
+#endif
 
 /**
  * @brief function pointer table to get current delay setting
@@ -883,6 +885,12 @@ void mac_set_addr(MAC_ENGINE *p_eng)
 	p_eng->inf.SA[3] = (ladr >> 16) & 0xff;
 	p_eng->inf.SA[4] = (ladr >> 8) & 0xff;
 	p_eng->inf.SA[5] = (ladr >> 0) & 0xff; // LSB	
+
+	printf("mac address: ");
+	for (int i = 0; i < 6; i++) {
+		printf("%02x:", p_eng->inf.SA[i]);
+	}
+	printf("\n");
 }
 
 void mac_set_interal_loopback(MAC_ENGINE *p_eng)
@@ -1000,7 +1008,7 @@ void FPri_End (MAC_ENGINE *eng, uint8_t option)
 	}
 
 	if (!eng->run.TM_RxDataEn) {
-	} else if (eng->flg.Err_Flag) {
+	} else if (eng->flg.error) {
 		PRINTF(option, "                    \n----> fail !!!\n");
 	}
 
@@ -1086,7 +1094,9 @@ void FPri_End (MAC_ENGINE *eng, uint8_t option)
 		} // End switch ( eng->ncsi_cap.PCI_DID_VID )
 	}
 	else {
-		PRINTF( option, "[PHY] Adr:%d ID2:%04x ID3:%04x (%s)\n", eng->phy.Adr, eng->phy.PHY_ID2, eng->phy.PHY_ID3, eng->phy.phy_name);
+		PRINTF(option, "[PHY] @addr %d: id = %04x_%04x (%s)\n",
+		       eng->phy.Adr, eng->phy.id1, eng->phy.id2,
+		       eng->phy.phy_name);
 	} // End if ( eng->arg.run_mode == MODE_NCSI )	
 } // End void FPri_End (MAC_ENGINE *eng, uint8_t option)
 
@@ -1095,8 +1105,8 @@ void FPri_ErrFlag (MAC_ENGINE *eng, uint8_t option)
 {
 	nt_log_func_name();
 	if ( eng->flg.print_en ) {
-		if ( eng->flg.Wrn_Flag ) {
-			if ( eng->flg.Wrn_Flag & Wrn_Flag_IOMarginOUF ) {
+		if ( eng->flg.warn ) {
+			if ( eng->flg.warn & Wrn_Flag_IOMarginOUF ) {
 				PRINTF(option, "[Warning] IO timing testing "
 					       "range out of boundary\n");
 
@@ -1118,45 +1128,45 @@ void FPri_ErrFlag (MAC_ENGINE *eng, uint8_t option)
 												  eng->io.Dly_out_min,
 												  eng->io.Dly_out_max );
 				}
-			} // End if ( eng->flg.Wrn_Flag & Wrn_Flag_IOMarginOUF )
-			if ( eng->flg.Wrn_Flag & Wrn_Flag_RxErFloatting ) {
+			} // End if ( eng->flg.warn & Wrn_Flag_IOMarginOUF )
+			if ( eng->flg.warn & Wrn_Flag_RxErFloatting ) {
 				PRINTF( option, "[Warning] NCSI RXER pin may be floatting to the MAC !!!\n" );
 				PRINTF( option, "          Please contact with the ASPEED Inc. for more help.\n" );
-			} // End if ( eng->flg.Wrn_Flag & Wrn_Flag_RxErFloatting )
-		} // End if ( eng->flg.Wrn_Flag )
+			} // End if ( eng->flg.warn & Wrn_Flag_RxErFloatting )
+		} // End if ( eng->flg.warn )
 
-		if ( eng->flg.Err_Flag ) {
+		if ( eng->flg.error ) {
 			PRINTF( option, "\n\n" );
-//PRINTF( option, "Err_Flag: %x\n\n", eng->flg.Err_Flag );
+//PRINTF( option, "error: %x\n\n", eng->flg.error );
 
-			if ( eng->flg.Err_Flag & Err_Flag_PHY_Type                ) { PRINTF( option, "[Err] Unidentifiable PHY                                     \n" ); }
-			if ( eng->flg.Err_Flag & Err_Flag_MALLOC_FrmSize          ) { PRINTF( option, "[Err] Malloc fail at frame size buffer                       \n" ); }
-			if ( eng->flg.Err_Flag & Err_Flag_MALLOC_LastWP           ) { PRINTF( option, "[Err] Malloc fail at last WP buffer                          \n" ); }
-			if ( eng->flg.Err_Flag & Err_Flag_Check_Buf_Data          ) { PRINTF( option, "[Err] Received data mismatch                                 \n" ); }
-			if ( eng->flg.Err_Flag & Err_Flag_NCSI_Check_TxOwnTimeOut ) { PRINTF( option, "[Err] Time out of checking Tx owner bit in NCSI packet       \n" ); }
-			if ( eng->flg.Err_Flag & Err_Flag_NCSI_Check_RxOwnTimeOut ) { PRINTF( option, "[Err] Time out of checking Rx owner bit in NCSI packet       \n" ); }
-			if ( eng->flg.Err_Flag & Err_Flag_NCSI_Check_ARPOwnTimeOut) { PRINTF( option, "[Err] Time out of checking ARP owner bit in NCSI packet      \n" ); }
-			if ( eng->flg.Err_Flag & Err_Flag_NCSI_No_PHY             ) { PRINTF( option, "[Err] Can not find NCSI PHY                                  \n" ); }
-			if ( eng->flg.Err_Flag & Err_Flag_NCSI_Channel_Num        ) { PRINTF( option, "[Err] NCSI Channel Number Mismatch                           \n" ); }
-			if ( eng->flg.Err_Flag & Err_Flag_NCSI_Package_Num        ) { PRINTF( option, "[Err] NCSI Package Number Mismatch                           \n" ); }
-			if ( eng->flg.Err_Flag & Err_Flag_PHY_TimeOut_RW          ) { PRINTF( option, "[Err] Time out of read/write PHY register                    \n" ); }
-			if ( eng->flg.Err_Flag & Err_Flag_PHY_TimeOut_Rst         ) { PRINTF( option, "[Err] Time out of reset PHY register                         \n" ); }
-			if ( eng->flg.Err_Flag & Err_Flag_RXBUF_UNAVA             ) { PRINTF( option, "[Err] MAC00h[2]:Receiving buffer unavailable                 \n" ); }
-			if ( eng->flg.Err_Flag & Err_Flag_RPKT_LOST               ) { PRINTF( option, "[Err] MAC00h[3]:Received packet lost due to RX FIFO full     \n" ); }
-			if ( eng->flg.Err_Flag & Err_Flag_NPTXBUF_UNAVA           ) { PRINTF( option, "[Err] MAC00h[6]:Normal priority transmit buffer unavailable  \n" ); }
-			if ( eng->flg.Err_Flag & Err_Flag_TPKT_LOST               ) { PRINTF( option, "[Err] MAC00h[7]:Packets transmitted to Ethernet lost         \n" ); }
-			if ( eng->flg.Err_Flag & Err_Flag_DMABufNum               ) { PRINTF( option, "[Err] DMA Buffer is not enough                               \n" ); }
-			if ( eng->flg.Err_Flag & Err_Flag_IOMargin                ) { PRINTF( option, "[Err] IO timing margin is not enough                         \n" ); }
+			if ( eng->flg.error & Err_Flag_PHY_Type                ) { PRINTF( option, "[Err] Unidentifiable PHY                                     \n" ); }
+			if ( eng->flg.error & Err_Flag_MALLOC_FrmSize          ) { PRINTF( option, "[Err] Malloc fail at frame size buffer                       \n" ); }
+			if ( eng->flg.error & Err_Flag_MALLOC_LastWP           ) { PRINTF( option, "[Err] Malloc fail at last WP buffer                          \n" ); }
+			if ( eng->flg.error & Err_Flag_Check_Buf_Data          ) { PRINTF( option, "[Err] Received data mismatch                                 \n" ); }
+			if ( eng->flg.error & Err_Flag_NCSI_Check_TxOwnTimeOut ) { PRINTF( option, "[Err] Time out of checking Tx owner bit in NCSI packet       \n" ); }
+			if ( eng->flg.error & Err_Flag_NCSI_Check_RxOwnTimeOut ) { PRINTF( option, "[Err] Time out of checking Rx owner bit in NCSI packet       \n" ); }
+			if ( eng->flg.error & Err_Flag_NCSI_Check_ARPOwnTimeOut) { PRINTF( option, "[Err] Time out of checking ARP owner bit in NCSI packet      \n" ); }
+			if ( eng->flg.error & Err_Flag_NCSI_No_PHY             ) { PRINTF( option, "[Err] Can not find NCSI PHY                                  \n" ); }
+			if ( eng->flg.error & Err_Flag_NCSI_Channel_Num        ) { PRINTF( option, "[Err] NCSI Channel Number Mismatch                           \n" ); }
+			if ( eng->flg.error & Err_Flag_NCSI_Package_Num        ) { PRINTF( option, "[Err] NCSI Package Number Mismatch                           \n" ); }
+			if ( eng->flg.error & Err_Flag_PHY_TimeOut_RW          ) { PRINTF( option, "[Err] Time out of read/write PHY register                    \n" ); }
+			if ( eng->flg.error & Err_Flag_PHY_TimeOut_Rst         ) { PRINTF( option, "[Err] Time out of reset PHY register                         \n" ); }
+			if ( eng->flg.error & Err_Flag_RXBUF_UNAVA             ) { PRINTF( option, "[Err] MAC00h[2]:Receiving buffer unavailable                 \n" ); }
+			if ( eng->flg.error & Err_Flag_RPKT_LOST               ) { PRINTF( option, "[Err] MAC00h[3]:Received packet lost due to RX FIFO full     \n" ); }
+			if ( eng->flg.error & Err_Flag_NPTXBUF_UNAVA           ) { PRINTF( option, "[Err] MAC00h[6]:Normal priority transmit buffer unavailable  \n" ); }
+			if ( eng->flg.error & Err_Flag_TPKT_LOST               ) { PRINTF( option, "[Err] MAC00h[7]:Packets transmitted to Ethernet lost         \n" ); }
+			if ( eng->flg.error & Err_Flag_DMABufNum               ) { PRINTF( option, "[Err] DMA Buffer is not enough                               \n" ); }
+			if ( eng->flg.error & Err_Flag_IOMargin                ) { PRINTF( option, "[Err] IO timing margin is not enough                         \n" ); }
 
-			if ( eng->flg.Err_Flag & Err_Flag_MHCLK_Ratio             ) {
+			if ( eng->flg.error & Err_Flag_MHCLK_Ratio             ) {
 				PRINTF( option, "[Err] Error setting of MAC AHB bus clock (SCU08[18:16])      \n" );
 				if ( eng->env.at_least_1g_valid )
 					{ PRINTF( option, "      SCU08[18:16] == 0x%01x is not the suggestion value 2.\n", eng->env.MHCLK_Ratio ); }
 				else
 					{ PRINTF( option, "      SCU08[18:16] == 0x%01x is not the suggestion value 4.\n", eng->env.MHCLK_Ratio ); }
-			} // End if ( eng->flg.Err_Flag & Err_Flag_MHCLK_Ratio             )
+			} // End if ( eng->flg.error & Err_Flag_MHCLK_Ratio             )
 
-			if ( eng->flg.Err_Flag & Err_Flag_IOMarginOUF ) {
+			if ( eng->flg.error & Err_Flag_IOMarginOUF ) {
 				PRINTF( option, "[Err] IO timing testing range out of boundary\n");
 				if (0 == eng->run.is_rgmii) {
 					PRINTF( option, "      (reg:%d,%d) %dx1(%d~%d,%d)\n", eng->io.Dly_in_reg_idx,
@@ -1176,22 +1186,22 @@ void FPri_ErrFlag (MAC_ENGINE *eng, uint8_t option)
 												  eng->io.Dly_out_min,
 												  eng->io.Dly_out_max );
 				}
-			} // End if ( eng->flg.Err_Flag & Err_Flag_IOMarginOUF )
+			} // End if ( eng->flg.error & Err_Flag_IOMarginOUF )
 
-			if ( eng->flg.Err_Flag & Err_Flag_Check_Des ) {
+			if ( eng->flg.error & Err_Flag_Check_Des ) {
 				PRINTF( option, "[Err] Descriptor error\n");
-				if ( eng->flg.Des_Flag & Des_Flag_TxOwnTimeOut ) { PRINTF( option, "[Des] Time out of checking Tx owner bit\n" ); }
-				if ( eng->flg.Des_Flag & Des_Flag_RxOwnTimeOut ) { PRINTF( option, "[Des] Time out of checking Rx owner bit\n" ); }
-				if ( eng->flg.Des_Flag & Des_Flag_FrameLen     ) { PRINTF( option, "[Des] Frame length mismatch            \n" ); }
-				if ( eng->flg.Des_Flag & Des_Flag_RxErr        ) { PRINTF( option, "[Des] Input signal RxErr               \n" ); }
-				if ( eng->flg.Des_Flag & Des_Flag_CRC          ) { PRINTF( option, "[Des] CRC error of frame               \n" ); }
-				if ( eng->flg.Des_Flag & Des_Flag_FTL          ) { PRINTF( option, "[Des] Frame too long                   \n" ); }
-				if ( eng->flg.Des_Flag & Des_Flag_Runt         ) { PRINTF( option, "[Des] Runt packet                      \n" ); }
-				if ( eng->flg.Des_Flag & Des_Flag_OddNibble    ) { PRINTF( option, "[Des] Nibble bit happen                \n" ); }
-				if ( eng->flg.Des_Flag & Des_Flag_RxFIFOFull   ) { PRINTF( option, "[Des] Rx FIFO full                     \n" ); }
-			} // End if ( eng->flg.Err_Flag & Err_Flag_Check_Des )
+				if ( eng->flg.desc & Des_Flag_TxOwnTimeOut ) { PRINTF( option, "[Des] Time out of checking Tx owner bit\n" ); }
+				if ( eng->flg.desc & Des_Flag_RxOwnTimeOut ) { PRINTF( option, "[Des] Time out of checking Rx owner bit\n" ); }
+				if ( eng->flg.desc & Des_Flag_FrameLen     ) { PRINTF( option, "[Des] Frame length mismatch            \n" ); }
+				if ( eng->flg.desc & Des_Flag_RxErr        ) { PRINTF( option, "[Des] Input signal RxErr               \n" ); }
+				if ( eng->flg.desc & Des_Flag_CRC          ) { PRINTF( option, "[Des] CRC error of frame               \n" ); }
+				if ( eng->flg.desc & Des_Flag_FTL          ) { PRINTF( option, "[Des] Frame too long                   \n" ); }
+				if ( eng->flg.desc & Des_Flag_Runt         ) { PRINTF( option, "[Des] Runt packet                      \n" ); }
+				if ( eng->flg.desc & Des_Flag_OddNibble    ) { PRINTF( option, "[Des] Nibble bit happen                \n" ); }
+				if ( eng->flg.desc & Des_Flag_RxFIFOFull   ) { PRINTF( option, "[Des] Rx FIFO full                     \n" ); }
+			} // End if ( eng->flg.error & Err_Flag_Check_Des )
 
-			if ( eng->flg.Err_Flag & Err_Flag_MACMode ) {
+			if ( eng->flg.error & Err_Flag_MACMode ) {
 				PRINTF( option, "[Err] MAC interface mode mismatch\n" );
 				for (int i = 0; i < 4; i++) {
 					if (eng->env.is_1g_valid[i]) {
@@ -1202,31 +1212,31 @@ void FPri_ErrFlag (MAC_ENGINE *eng, uint8_t option)
 						       "[MAC%d] RMII\n", i);
 					}
 				}
-			} // End if ( eng->flg.Err_Flag & Err_Flag_MACMode )
+			} // End if ( eng->flg.error & Err_Flag_MACMode )
 
 			if ( eng->arg.run_mode == MODE_NCSI ) {
-				if ( eng->flg.Err_Flag & Err_Flag_NCSI_LinkFail ) {
+				if ( eng->flg.error & ERR_FLAG_NCSI_LINKFAIL ) {
 					PRINTF( option, "[Err] NCSI packet retry number over flows when find channel\n" );
 
-					if ( eng->flg.NCSI_Flag & NCSI_Flag_Get_Version_ID                  ) { PRINTF( option, "[NCSI] Time out when Get Version ID                  \n" ); }
-					if ( eng->flg.NCSI_Flag & NCSI_Flag_Get_Capabilities                ) { PRINTF( option, "[NCSI] Time out when Get Capabilities                \n" ); }
-					if ( eng->flg.NCSI_Flag & NCSI_Flag_Select_Active_Package           ) { PRINTF( option, "[NCSI] Time out when Select Active Package           \n" ); }
-					if ( eng->flg.NCSI_Flag & NCSI_Flag_Enable_Set_MAC_Address          ) { PRINTF( option, "[NCSI] Time out when Enable Set MAC Address          \n" ); }
-					if ( eng->flg.NCSI_Flag & NCSI_Flag_Enable_Broadcast_Filter         ) { PRINTF( option, "[NCSI] Time out when Enable Broadcast Filter         \n" ); }
-					if ( eng->flg.NCSI_Flag & NCSI_Flag_Enable_Network_TX               ) { PRINTF( option, "[NCSI] Time out when Enable Network TX               \n" ); }
-					if ( eng->flg.NCSI_Flag & NCSI_Flag_Enable_Channel                  ) { PRINTF( option, "[NCSI] Time out when Enable Channel                  \n" ); }
-					if ( eng->flg.NCSI_Flag & NCSI_Flag_Disable_Network_TX              ) { PRINTF( option, "[NCSI] Time out when Disable Network TX              \n" ); }
-					if ( eng->flg.NCSI_Flag & NCSI_Flag_Disable_Channel                 ) { PRINTF( option, "[NCSI] Time out when Disable Channel                 \n" ); }
-					if ( eng->flg.NCSI_Flag & NCSI_Flag_Select_Package                  ) { PRINTF( option, "[NCSI] Time out when Select Package                  \n" ); }
-					if ( eng->flg.NCSI_Flag & NCSI_Flag_Deselect_Package                ) { PRINTF( option, "[NCSI] Time out when Deselect Package                \n" ); }
-					if ( eng->flg.NCSI_Flag & NCSI_Flag_Set_Link                        ) { PRINTF( option, "[NCSI] Time out when Set Link                        \n" ); }
-					if ( eng->flg.NCSI_Flag & NCSI_Flag_Get_Controller_Packet_Statistics) { PRINTF( option, "[NCSI] Time out when Get Controller Packet Statistics\n" ); }
+					if ( eng->flg.ncsi & NCSI_Flag_Get_Version_ID                  ) { PRINTF( option, "[NCSI] Time out when Get Version ID                  \n" ); }
+					if ( eng->flg.ncsi & NCSI_Flag_Get_Capabilities                ) { PRINTF( option, "[NCSI] Time out when Get Capabilities                \n" ); }
+					if ( eng->flg.ncsi & NCSI_Flag_Select_Active_Package           ) { PRINTF( option, "[NCSI] Time out when Select Active Package           \n" ); }
+					if ( eng->flg.ncsi & NCSI_Flag_Enable_Set_MAC_Address          ) { PRINTF( option, "[NCSI] Time out when Enable Set MAC Address          \n" ); }
+					if ( eng->flg.ncsi & NCSI_Flag_Enable_Broadcast_Filter         ) { PRINTF( option, "[NCSI] Time out when Enable Broadcast Filter         \n" ); }
+					if ( eng->flg.ncsi & NCSI_Flag_Enable_Network_TX               ) { PRINTF( option, "[NCSI] Time out when Enable Network TX               \n" ); }
+					if ( eng->flg.ncsi & NCSI_Flag_Enable_Channel                  ) { PRINTF( option, "[NCSI] Time out when Enable Channel                  \n" ); }
+					if ( eng->flg.ncsi & NCSI_Flag_Disable_Network_TX              ) { PRINTF( option, "[NCSI] Time out when Disable Network TX              \n" ); }
+					if ( eng->flg.ncsi & NCSI_Flag_Disable_Channel                 ) { PRINTF( option, "[NCSI] Time out when Disable Channel                 \n" ); }
+					if ( eng->flg.ncsi & NCSI_Flag_Select_Package                  ) { PRINTF( option, "[NCSI] Time out when Select Package                  \n" ); }
+					if ( eng->flg.ncsi & NCSI_Flag_Deselect_Package                ) { PRINTF( option, "[NCSI] Time out when Deselect Package                \n" ); }
+					if ( eng->flg.ncsi & NCSI_Flag_Set_Link                        ) { PRINTF( option, "[NCSI] Time out when Set Link                        \n" ); }
+					if ( eng->flg.ncsi & NCSI_Flag_Get_Controller_Packet_Statistics) { PRINTF( option, "[NCSI] Time out when Get Controller Packet Statistics\n" ); }
 				}
 
-				if ( eng->flg.Err_Flag & Err_Flag_NCSI_Channel_Num ) { PRINTF( option, "[NCSI] Channel number expected: %d, real: %d\n", eng->arg.GChannelTolNum, eng->dat.number_chl ); }
-				if ( eng->flg.Err_Flag & Err_Flag_NCSI_Package_Num ) { PRINTF( option, "[NCSI] Peckage number expected: %d, real: %d\n", eng->arg.GPackageTolNum, eng->dat.number_pak ); }
+				if ( eng->flg.error & Err_Flag_NCSI_Channel_Num ) { PRINTF( option, "[NCSI] Channel number expected: %d, real: %d\n", eng->arg.GChannelTolNum, eng->dat.number_chl ); }
+				if ( eng->flg.error & Err_Flag_NCSI_Package_Num ) { PRINTF( option, "[NCSI] Peckage number expected: %d, real: %d\n", eng->arg.GPackageTolNum, eng->dat.number_pak ); }
 			} // End if ( eng->arg.run_mode == MODE_NCSI )
-		} // End if ( eng->flg.Err_Flag )
+		} // End if ( eng->flg.error )
 	} // End if ( eng->flg.print_en )
 } // End void FPri_ErrFlag (MAC_ENGINE *eng, uint8_t option)
 
@@ -1235,10 +1245,10 @@ void FPri_ErrFlag (MAC_ENGINE *eng, uint8_t option)
 //------------------------------------------------------------
 int FindErr (MAC_ENGINE *p_eng, int value) 
 {
-	p_eng->flg.Err_Flag = p_eng->flg.Err_Flag | value;
+	p_eng->flg.error = p_eng->flg.error | value;
 
-	if (DbgPrn_ErrFlg)
-		printf("\nErr_Flag: [%08x]\n", p_eng->flg.Err_Flag);
+	if (DBG_PRINT_ERR_FLAG)
+		printf("flags: error = %08x\n", p_eng->flg.error);
 
 	return (1);
 }
@@ -1246,11 +1256,10 @@ int FindErr (MAC_ENGINE *p_eng, int value)
 //------------------------------------------------------------
 int FindErr_Des (MAC_ENGINE *p_eng, int value) 
 {
-	p_eng->flg.Err_Flag = p_eng->flg.Err_Flag | Err_Flag_Check_Des;
-	p_eng->flg.Des_Flag = p_eng->flg.Des_Flag | value;
-	if (DbgPrn_ErrFlg)
-		printf("\nErr_Flag: [%08x] Des_Flag: [%08x]\n",
-		       p_eng->flg.Err_Flag, p_eng->flg.Des_Flag);
+	p_eng->flg.error = p_eng->flg.error | Err_Flag_Check_Des;
+	p_eng->flg.desc = p_eng->flg.desc | value;
+	if (DBG_PRINT_ERR_FLAG)
+		printf("flags: error = %08x, desc = %08x\n", p_eng->flg.error, p_eng->flg.desc);
 
 	return (1);
 }
@@ -1293,7 +1302,7 @@ int check_int (MAC_ENGINE *eng, char *type )
 	}
 #endif
 
-	if ( eng->flg.Err_Flag )
+	if ( eng->flg.error )
 		return(1);
 	else
 		return(0);
@@ -1387,28 +1396,22 @@ void setup_framesize (MAC_ENGINE *eng)
 } // End void setup_framesize (void)
 
 //------------------------------------------------------------
-void setup_arp (MAC_ENGINE *eng) 
+void setup_arp(MAC_ENGINE *eng)
 {
-	int        i;
 
 	nt_log_func_name();
-	for (i = 0; i < 16; i++)
-		eng->dat.ARP_data[i] = ARP_org_data[i];
 
-	eng->dat.ARP_data[1] = 0x0000ffff | (eng->inf.SA[0] << 16) // MSB
-			       | (eng->inf.SA[1] << 24);
+	memcpy(eng->dat.ARP_data, ARP_org_data, sizeof(ARP_org_data));
 
-	eng->dat.ARP_data[2] = (eng->inf.SA[2]) | (eng->inf.SA[3] << 8) |
-			       (eng->inf.SA[4] << 16) |
-			       (eng->inf.SA[5] << 24); // LSB
-
-	eng->dat.ARP_data[5] = 0x00000100 | (eng->inf.SA[0] << 16) // MSB
-			       | (eng->inf.SA[1] << 24);
-
-	eng->dat.ARP_data[6] = (eng->inf.SA[2]) | (eng->inf.SA[3] << 8) |
-			       (eng->inf.SA[4] << 16) |
-			       (eng->inf.SA[5] << 24); // LSB
-} // End void setup_arp (MAC_ENGINE *eng)
+	eng->dat.ARP_data[1] &= ~GENMASK(31, 16);
+	eng->dat.ARP_data[1] |= (eng->inf.SA[1] << 24) | (eng->inf.SA[0] << 16);
+	eng->dat.ARP_data[2] = (eng->inf.SA[5] << 24) | (eng->inf.SA[4] << 16) |
+			       (eng->inf.SA[3] << 8) | (eng->inf.SA[2]);
+	eng->dat.ARP_data[5] &= ~GENMASK(31, 16);
+	eng->dat.ARP_data[5] |= (eng->inf.SA[1] << 24) | (eng->inf.SA[0] << 16);
+	eng->dat.ARP_data[6] = (eng->inf.SA[5] << 24) | (eng->inf.SA[4] << 16) |
+			       (eng->inf.SA[3] << 8) | (eng->inf.SA[2]);
+}
 
 //------------------------------------------------------------
 void setup_buf (MAC_ENGINE *eng) 
@@ -1437,16 +1440,14 @@ void setup_buf (MAC_ENGINE *eng)
 			for (des_num = 0; des_num < eng->dat.Des_Num; des_num++) {
 				if ( DbgPrn_BufAdr )
 					printf("[loop[%d]:%4d][des:%4d][setup_buf  ] %08x\n", eng->run.loop_of_cnt, eng->run.loop_cnt, des_num, adr_srt);
-#ifdef ENABLE_DASA
-				Write_Mem_Dat_DD( adr_srt    , 0xffffffff           );
-				Write_Mem_Dat_DD( adr_srt + 4, eng->dat.ARP_data[1] );
-				Write_Mem_Dat_DD( adr_srt + 8, eng->dat.ARP_data[2] );
+				Write_Mem_Dat_DD(adr_srt, 0xffffffff);
+				Write_Mem_Dat_DD(adr_srt + 4,
+						 eng->dat.ARP_data[1]);
+				Write_Mem_Dat_DD(adr_srt + 8,
+						 eng->dat.ARP_data[2]);
 
-				for ( adr = (adr_srt + 12); adr < (adr_srt + DMA_PakSize); adr += 4 )
-#else
-				for ( adr =  adr_srt;       adr < (adr_srt + DMA_PakSize); adr += 4 )
-#endif
-				{
+				for (adr = (adr_srt + 12);
+				     adr < (adr_srt + DMA_PakSize); adr += 4) {
 					switch (eng->arg.test_mode) {
 					case 4:
 						gdata = rand() | (rand() << 16);
@@ -1455,12 +1456,11 @@ void setup_buf (MAC_ENGINE *eng)
 						gdata = eng->arg.user_def_val;
 						break;
 					}
-					Write_Mem_Dat_DD( adr, gdata );
-				} // End for()
+					Write_Mem_Dat_DD(adr, gdata);
+				}
 				adr_srt += DMA_PakSize;
-			} // End for (des_num = 0; des_num < eng->dat.Des_Num; des_num++)
-		}
-		else {
+			}
+		} else {
 			printf("----->[ARP] 60 bytes\n");
 			for (i = 0; i < 16; i++)
 				printf("      [Tx%02d] %08x %08x\n", i, eng->dat.ARP_data[i], SWAP_4B( eng->dat.ARP_data[i] ) );
@@ -1655,10 +1655,11 @@ char check_Data (MAC_ENGINE *eng, uint32_t datbase, int32_t number)
 //------------------------------------------------------------
 char check_buf (MAC_ENGINE *eng, int loopcnt) 
 {
-	int32_t       des_num;
-	uint32_t      desadr;
-	uint32_t      datbase;
-
+	int32_t des_num;
+	uint32_t desadr;
+#ifdef CHECK_RX_DATA
+	uint32_t datbase;
+#endif
 	nt_log_func_name();
 
 	desadr = eng->run.rdes_base + (16 * eng->dat.Des_Num) - 4;
@@ -1964,7 +1965,7 @@ char check_des_header_Rx (MAC_ENGINE *eng, char *type, uint32_t adr, int32_t des
 
 #endif // End CheckRxOwn
 
-	if ( eng->flg.Err_Flag )
+	if ( eng->flg.error )
 		return(1);
 	else
 		return(0);
@@ -2053,14 +2054,14 @@ char check_des (MAC_ENGINE *eng, uint32_t bufnum, int checkpoint)
 		if (eng->run.TM_TxDataEn) {
 			ret = check_des_header_Tx(eng, "", H_tx_desadr, desnum);
 			if (ret) {
-				eng->flg.CheckDesFail_DesNum = desnum;
+				eng->flg.n_desc_fail = desnum;
 				return ret;
 			}
 		}
 		if (eng->run.TM_RxDataEn) {
 			ret = check_des_header_Rx(eng, "", H_rx_desadr, desnum);
 			if (ret) {
-				eng->flg.CheckDesFail_DesNum = desnum;
+				eng->flg.n_desc_fail = desnum;
 				return ret;
 				
 			}
@@ -2271,9 +2272,10 @@ char TestingLoop (MAC_ENGINE *eng, uint32_t loop_checknum)
 		eng->dat.DMA_Base_Rx =
 		    ZeroCopy_OFFSET + GET_DMA_BASE(eng, eng->run.loop_cnt + 1);
 		//[Check DES]--------------------
-		if (ret = check_des(eng, eng->run.loop_cnt, checken)) {
+		ret = check_des(eng, eng->run.loop_cnt, checken);
+		if (ret) {
 			//descriptor error
-			eng->dat.Des_Num = eng->flg.CheckDesFail_DesNum + 1;
+			eng->dat.Des_Num = eng->flg.n_desc_fail + 1;
 #ifdef CheckRxBuf
 			if (checkprd)
 				check_buf(eng, loop_checknum);
