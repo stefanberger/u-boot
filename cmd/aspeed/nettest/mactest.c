@@ -677,6 +677,7 @@ static uint32_t setup_interface(MAC_ENGINE *p_eng);
 static uint32_t setup_running(MAC_ENGINE *p_eng)
 {
 	uint32_t n_desp_min;
+	int i;
 
 	if (0 != check_mac_idx(p_eng)) {
 		return 1;
