@@ -1383,6 +1383,20 @@ uint32_t test_start(MAC_ENGINE *p_eng, PHY_ENGINE *p_phy_eng)
 
 	return (finish_check(p_eng, 0));
 }
+static uint32_t ring_rgmiick(uint32_t reg_offset, uint32_t clk_sel)
+{
+	uint32_t freq;
+
+	SCU_WR(0, reg_offset);
+	SCU_WR((0xf << 2) | BIT(0), reg_offset);
+	udelay(1000);
+	SCU_WR((clk_sel << 2) | BIT(1) | BIT(0), reg_offset);
+	while ((SCU_RD(reg_offset) & BIT(6)) == 0);
+
+	freq = (SCU_RD(reg_offset) & GENMASK(29, 16)) >> 16;
+	SCU_WR(0, reg_offset);
+	return ((freq + 1) * 48828);
+}
 
 void dump_setting(MAC_ENGINE *p_eng)
 {
@@ -1403,6 +1417,9 @@ void dump_setting(MAC_ENGINE *p_eng)
 	       p_eng->env.is_1g_valid[3]);	
 	printf("===================\n");
 
+
+	printf("RGMIICK of MAC1/2 = %dHz\n", ring_rgmiick(0x320, 0xf));
+	printf("RGMIICK of MAC3/4 = %dHz\n", ring_rgmiick(0x330, 0x9));
 
 }
 /**
