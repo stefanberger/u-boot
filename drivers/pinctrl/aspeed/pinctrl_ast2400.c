@@ -136,7 +136,7 @@ static const struct aspeed_group_config ast2400_groups[] = {
 	{ "I2C6", 1, i2c6_link },
 	{ "I2C7", 1, i2c7_link },
 	{ "I2C8", 1, i2c8_link },
-	{ "I2C9", 2, i2c9_link },
+	{ "I2C9", 1, i2c9_link },
 	{ "I2C10", 2, i2c10_link },
 	{ "I2C11", 2, i2c11_link },
 	{ "I2C12", 2, i2c12_link },
