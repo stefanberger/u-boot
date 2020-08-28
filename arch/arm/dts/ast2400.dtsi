@@ -184,7 +184,7 @@
 
 			sram@1e720000 {
 				compatible = "mmio-sram";
-				reg = <0x1e720000 0x8000>;	// 36K
+				reg = <0x1e720000 0x8000>;	// 32K
 			};
 
 			sdhci: sdhci@1e740000 {
