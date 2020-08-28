@@ -25,6 +25,8 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
+#define OTP_VER				"1.0.0"
+
 #define OTP_PASSWD			0x349fe38a
 #define RETRY				3
 #define OTP_REGION_STRAP		BIT(0)
@@ -1987,7 +1989,16 @@ static int do_otpprotect(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[
 
 }
 
+static int do_otpver(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
+{
+	printf("OTP tool version: %s\n", OTP_VER);
+	printf("OTP info version: %s\n", OTP_INFO_VER);
+
+	return CMD_RET_SUCCESS;
+}
+
 static cmd_tbl_t cmd_otp[] = {
+	U_BOOT_CMD_MKENT(version, 1, 0, do_otpver, "", ""),
 	U_BOOT_CMD_MKENT(read, 4, 0, do_otpread, "", ""),
 	U_BOOT_CMD_MKENT(info, 3, 0, do_otpinfo, "", ""),
 	U_BOOT_CMD_MKENT(prog, 3, 0, do_otpprog, "", ""),
@@ -2043,7 +2054,8 @@ static int do_ast_otp(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 U_BOOT_CMD(
 	otp, 7, 0,  do_ast_otp,
 	"ASPEED One-Time-Programmable sub-system",
-	"read conf|data <otp_dw_offset> <dw_count>\n"
+	"version\n"
+	"otp read conf|data <otp_dw_offset> <dw_count>\n"
 	"otp read strap <strap_bit_offset> <bit_count>\n"
 	"otp info strap [v]\n"
 	"otp info conf [otp_dw_offset]\n"
