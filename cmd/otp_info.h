@@ -9,17 +9,17 @@
 #define OTP_REG_VALID_BIT	-3
 
 struct otpstrap_info {
-	char bit_offset;
-	char length;
-	char value;
+	signed char bit_offset;
+	signed char length;
+	signed char value;
 	char *information;
 };
 
 struct otpconf_info {
-	char dw_offset;
-	char bit_offset;
-	char length;
-	char value;
+	signed char dw_offset;
+	signed char bit_offset;
+	signed char length;
+	signed char value;
 	char *information;
 };
 
