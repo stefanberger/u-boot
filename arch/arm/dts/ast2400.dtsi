@@ -104,27 +104,6 @@
 			};
 		};
 
-		spi2: flash-controller@1e631000 {
-			reg = < 0x1e631000 0xc4
-				0x38000000 0x08000000 >;
-			#address-cells = <1>;
-			#size-cells = <0>;
-			compatible = "aspeed,ast2400-spi";
-			clocks = <&scu ASPEED_CLK_AHB>;
-			status = "disabled";
-			num-cs = <2>;
-			flash@0 {
-				reg = < 0 >;
-				compatible = "jedec,spi-nor";
-				status = "disabled";
-			};
-			flash@1 {
-				reg = < 1 >;
-				compatible = "jedec,spi-nor";
-				status = "disabled";
-			};
-		};
-
 		vic: interrupt-controller@1e6c0080 {
 			compatible = "aspeed,ast2400-vic";
 			interrupt-controller;
@@ -156,13 +135,6 @@
 			status = "disabled";
 		};
 
-		ehci1: usb@1e6a3000 {
-			compatible = "aspeed,ast2400-ehci", "generic-ehci";
-			reg = <0x1e6a3000 0x100>;
-			interrupts = <13>;
-			status = "disabled";
-		};
-
 		uhci: usb@1e6b0000 {
 			compatible = "aspeed,ast2400-uhci", "generic-uhci";
 			reg = <0x1e6b0000 0x100>;
@@ -178,7 +150,7 @@
 			ranges;
 
 			syscon: syscon@1e6e2000 {
-				compatible = "aspeed,g5-scu", "syscon", "simple-mfd";
+				compatible = "aspeed,g4-scu", "syscon", "simple-mfd";
 				reg = <0x1e6e2000 0x1a8>;
 				#clock-cells = <1>;
 				#reset-cells = <1>;
@@ -212,7 +184,7 @@
 
 			sram@1e720000 {
 				compatible = "mmio-sram";
-				reg = <0x1e720000 0x8000>;	// 36K
+				reg = <0x1e720000 0x8000>;	// 32K
 			};
 
 			sdhci: sdhci@1e740000 {
