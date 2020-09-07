@@ -134,17 +134,17 @@ extern u32 ast2600_get_pll_rate(struct ast2600_scu *scu, int pll_idx)
 		/* F = 25Mhz * [(M + 2) / (n + 1)] / (p + 1) */
 		union ast2600_pll_reg reg;
 		reg.w = pll_reg;
+		/* 
+		HPLL Numerator (M) = fix 0x5F when SCU500[10]=1
+							 fix 0xBF when SCU500[10]=0 and SCU500[8]=1
+		SCU200[12:0] (default 0x8F) when SCU510[10]=0 and SCU510[8]=0 
+		HPLL Denumerator (N) =	SCU200[18:13] (default 0x2)
+		HPLL Divider (P)	 =	SCU200[22:19] (default 0x0)
+		HPLL Bandwidth Adj (NB) =  fix 0x2F when SCU500[10]=1
+								   fix 0x5F when SCU500[10]=0 and SCU500[8]=1
+		SCU204[11:0] (default 0x31) when SCU500[10]=0 and SCU500[8]=0 
+		*/
 		if (pll_idx == ASPEED_CLK_HPLL) {
-			/* 
-			HPLL Numerator (M) = fix 0x5F when SCU500[10]=1
-								 fix 0xBF when SCU500[10]=0 and SCU500[8]=1
-			SCU200[12:0] (default 0x8F) when SCU510[10]=0 and SCU510[8]=0 
-			HPLL Denumerator (N) =	SCU200[18:13] (default 0x2)
-			HPLL Divider (P)	 =  SCU200[22:19] (default 0x0)
-			HPLL Bandwidth Adj (NB) =  fix 0x2F when SCU500[10]=1
-									   fix 0x5F	when SCU500[10]=0 and SCU500[8]=1
-			SCU204[11:0] (default 0x31) when SCU500[10]=0 and SCU500[8]=0 
-			*/
 			u32 hwstrap1 = readl(&scu->hwstrap1.hwstrap);
 			if (hwstrap1 & BIT(10))
 				reg.b.m = 0x5F;
@@ -530,7 +530,6 @@ static ulong ast2600_clk_get_rate(struct clk *clk)
  * @brief	lookup PLL divider config by input/output rate
  * @param[in]	*pll - PLL descriptor
  * @return	true - if PLL divider config is found, false - else
- * 
  * The function caller shall fill "pll->in" and "pll->out",
  * then this function will search the lookup table
  * to find a valid PLL divider configuration.
@@ -608,7 +607,7 @@ static u32 ast2600_configure_ddr(struct ast2600_scu *scu, ulong rate)
 
 	mpll.in = AST2600_CLK_IN;
 	mpll.out = rate;
-	if (false == ast2600_search_clock_config(&mpll)) {
+	if (ast2600_search_clock_config(&mpll) == false) {
 		printf("error!! unable to find valid DDR clock setting\n");
 		return 0;
 	}
@@ -686,29 +685,26 @@ static u32 ast2600_configure_mac34_clk(struct ast2600_scu *scu)
 
 /**
  * ast2600 RGMII clock source tree
- * 
- *    125M from external PAD -------->|\
- *    HPLL -->|\                      | |---->RGMII 125M for MAC#1 & MAC#2
- *            | |---->| divider |---->|/                             +
- *    EPLL -->|/                                                     |
- *                                                                   |
- *    +---------<-----------|RGMIICK PAD output enable|<-------------+
- *    |
- *    +--------------------------->|\
- *                                 | |----> RGMII 125M for MAC#3 & MAC#4
- *    HCLK 200M ---->|divider|---->|/
- * 
+ * 125M from external PAD -------->|\
+ * HPLL -->|\                      | |---->RGMII 125M for MAC#1 & MAC#2
+ *         | |---->| divider |---->|/                             +
+ * EPLL -->|/                                                     |
+ *                                                                |
+ * +---------<-----------|RGMIICK PAD output enable|<-------------+
+ * |
+ * +--------------------------->|\
+ *                              | |----> RGMII 125M for MAC#3 & MAC#4
+ * HCLK 200M ---->|divider|---->|/
  * To simplify the control flow:
- * 	1. RGMII 1/2 always use EPLL as the internal clock source
- * 	2. RGMII 3/4 always use RGMIICK pad as the RGMII 125M source
- * 
- *    125M from external PAD -------->|\
- *                                    | |---->RGMII 125M for MAC#1 & MAC#2
- *            EPLL---->| divider |--->|/                             + 
- *                                                                   |
- *    +<--------------------|RGMIICK PAD output enable|<-------------+
- *    |
- *    +--------------------------->RGMII 125M for MAC#3 & MAC#4
+ * 1. RGMII 1/2 always use EPLL as the internal clock source
+ * 2. RGMII 3/4 always use RGMIICK pad as the RGMII 125M source
+ * 125M from external PAD -------->|\
+ *                                 | |---->RGMII 125M for MAC#1 & MAC#2
+ *         EPLL---->| divider |--->|/                             + 
+ *                                                                |
+ * +<--------------------|RGMIICK PAD output enable|<-------------+
+ * |
+ * +--------------------------->RGMII 125M for MAC#3 & MAC#4
 */
 #define RGMIICK_SRC_PAD 0
 #define RGMIICK_SRC_EPLL 1 /* recommended */
@@ -761,8 +757,8 @@ static void ast2600_init_mac_pll(struct ast2600_scu *p_scu,
 	if (false == ast2600_search_clock_config(&pll)) {
 		printf("error!! unable to find valid ETHNET MAC clock "
 		       "setting\n");
-		debug("%s: pll cfg = 0x%08x 0x%08x\n", __func__, pll.cfg.reg.w,
-		      pll.cfg.ext_reg);
+		debug("%s: pll cfg = 0x%08x 0x%08x\n", __func__, 
+			pll.cfg.reg.w, pll.cfg.ext_reg);
 		debug("%s: pll cfg = %02x %02x %02x\n", __func__,
 		      pll.cfg.reg.b.m, pll.cfg.reg.b.n, pll.cfg.reg.b.p);
 		return;
@@ -813,12 +809,10 @@ static void ast2600_init_rgmii_clk(struct ast2600_scu *p_scu,
 
 /**
  * ast2600 RMII/NCSI clock source tree
- * 
- *    HPLL -->|\
- *            | |---->| divider |----> RMII 50M for MAC#1 & MAC#2
- *    EPLL -->|/ 
- * 
- *    HCLK(SCLICLK)---->| divider |----> RMII 50M for MAC#3 & MAC#4
+ * HPLL -->|\
+ *         | |---->| divider |----> RMII 50M for MAC#1 & MAC#2
+ * EPLL -->|/ 
+ * HCLK(SCLICLK)---->| divider |----> RMII 50M for MAC#3 & MAC#4
 */
 static void ast2600_init_rmii_clk(struct ast2600_scu *p_scu,
 				  struct ast2600_mac_clk_div *p_cfg)
@@ -1012,12 +1006,12 @@ static ulong ast2600_enable_extemmcclk(struct ast2600_scu *scu)
 	enableclk_bit = BIT(SCU_CLKSTOP_EXTEMMC);
 
 	//ast2600 eMMC controller max clk is 200Mhz
-	/*
-	HPll->1/2->
-               \
-				->SCU300[11]->SCU300[14:12][1/N]->EMMC12C[15:8][1/N]-> eMMC clk
-               /
-	MPLL------>
+
+	/* HPll->1/2->
+    *             \
+	* 	           ->SCU300[11]->SCU300[14:12][1/N]->EMMC12C[15:8][1/N]-> eMMC clk
+    *             /
+	* MPLL------>
 	*/
 	if (((revision_id & CHIP_REVISION_ID) >> 16)) {
 		//AST2600A1 : use mpll to be clk source
