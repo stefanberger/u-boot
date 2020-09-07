@@ -938,7 +938,7 @@ static ulong ast2600_enable_extsdclk(struct ast2600_scu *scu)
 
 	/* ast2600 sd controller max clk is 200Mhz :
 	 * use apll for clock source 800/4 = 200 : controller max is 200mhz
-	 * /
+	 */
 	rate = ast2600_get_apll_rate(scu);
 	for(i = 0; i < 8; i++) {
 		div = (i + 1) * 2;
