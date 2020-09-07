@@ -762,8 +762,10 @@ static void ast2600_init_mac_pll(struct ast2600_scu *p_scu,
 	pll.out = p_cfg->fin;
 	if (ast2600_search_clock_config(&pll) == false) {
 		pr_err("unable to find valid ETHNET MAC clock setting\n");
-		debug("%s: pll cfg = 0x%08x 0x%08x\n", __func__, pll.cfg.reg.w, pll.cfg.ext_reg);
-		debug("%s: pll cfg = %02x %02x %02x\n", __func__, pll.cfg.reg.b.m, pll.cfg.reg.b.n, pll.cfg.reg.b.p);
+		debug("%s: pll cfg = 0x%08x 0x%08x\n", __func__, pll.cfg.reg.w,
+		      pll.cfg.ext_reg);
+		debug("%s: pll cfg = %02x %02x %02x\n", __func__,
+		      pll.cfg.reg.b.m, pll.cfg.reg.b.n, pll.cfg.reg.b.p);
 		return;
 	}
 	ast2600_configure_pll(p_scu, &pll.cfg, p_cfg->src);
@@ -779,8 +781,7 @@ static void ast2600_init_rgmii_clk(struct ast2600_scu *p_scu,
 	reg_340 &= ~GENMASK(31, 29);
 	/* scu340[28]: RGMIICK PAD output enable (to MAC 3/4) */
 	reg_340 |= BIT(28);
-	if (p_cfg->src == ASPEED_CLK_EPLL ||
-	    p_cfg->src == ASPEED_CLK_HPLL) {
+	if (p_cfg->src == ASPEED_CLK_EPLL || p_cfg->src == ASPEED_CLK_HPLL) {
 		/*
 		 * re-init PLL if the current PLL output frequency doesn't match
 		 * the divider setting
@@ -821,8 +822,7 @@ static void ast2600_init_rmii_clk(struct ast2600_scu *p_scu,
 	u32 reg_304;
 	u32 reg_310;
 
-	if (p_cfg->src == ASPEED_CLK_EPLL ||
-	    p_cfg->src == ASPEED_CLK_HPLL) {
+	if (p_cfg->src == ASPEED_CLK_EPLL || p_cfg->src == ASPEED_CLK_HPLL) {
 		/*
 		 * re-init PLL if the current PLL output frequency doesn't match
 		 * the divider setting
@@ -1198,7 +1198,6 @@ static int ast2600_clk_bind(struct udevice *dev)
 	return 0;
 }
 
-#ifdef CONFIG_CMD_CLK
 struct aspeed_clks {
 	ulong id;
 	const char *name;
@@ -1257,7 +1256,6 @@ int soc_clk_dump(void)
 
 	return 0;
 }
-#endif
 
 static const struct udevice_id ast2600_clk_ids[] = {
 	{
