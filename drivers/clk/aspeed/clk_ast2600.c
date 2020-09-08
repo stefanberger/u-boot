@@ -15,24 +15,24 @@
 /*
  * MAC Clock Delay settings
  */
-#define RGMII_TXCLK_ODLY 8
-#define RMII_RXCLK_IDLY 2
+#define RGMII_TXCLK_ODLY		8
+#define RMII_RXCLK_IDLY			2
 
-#define MAC_DEF_DELAY_1G 0x0041b75d
-#define MAC_DEF_DELAY_100M 0x00417410
-#define MAC_DEF_DELAY_10M 0x00417410
+#define MAC_DEF_DELAY_1G		0x0041b75d
+#define MAC_DEF_DELAY_100M		0x00417410
+#define MAC_DEF_DELAY_10M		0x00417410
 
-#define MAC34_DEF_DELAY_1G 0x0010438a
-#define MAC34_DEF_DELAY_100M 0x00104208
-#define MAC34_DEF_DELAY_10M 0x00104208
+#define MAC34_DEF_DELAY_1G		0x0010438a
+#define MAC34_DEF_DELAY_100M	0x00104208
+#define MAC34_DEF_DELAY_10M		0x00104208
 
 /*
  * TGMII Clock Duty constants, taken from Aspeed SDK
  */
-#define RGMII2_TXCK_DUTY 0x66
-#define RGMII1_TXCK_DUTY 0x64
-#define D2PLL_DEFAULT_RATE (250 * 1000 * 1000)
-#define CHIP_REVISION_ID GENMASK(23, 16)
+#define RGMII2_TXCK_DUTY		0x66
+#define RGMII1_TXCK_DUTY		0x64
+#define D2PLL_DEFAULT_RATE		(250 * 1000 * 1000)
+#define CHIP_REVISION_ID		GENMASK(23, 16)
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -51,13 +51,13 @@ DECLARE_GLOBAL_DATA_PTR;
 union ast2600_pll_reg {
 	unsigned int w;
 	struct {
-		unsigned int m : 13; /* bit[12:0]	*/
-		unsigned int n : 6; /* bit[18:13]	*/
-		unsigned int p : 4; /* bit[22:19]	*/
-		unsigned int off : 1; /* bit[23]	*/
-		unsigned int bypass : 1; /* bit[24]	*/
-		unsigned int reset : 1; /* bit[25]	*/
-		unsigned int reserved : 6; /* bit[31:26]	*/
+		unsigned int m : 13;		/* bit[12:0]	*/
+		unsigned int n : 6;			/* bit[18:13]	*/
+		unsigned int p : 4;			/* bit[22:19]	*/
+		unsigned int off : 1;		/* bit[23]	*/
+		unsigned int bypass : 1;	/* bit[24]	*/
+		unsigned int reset : 1;		/* bit[25]	*/
+		unsigned int reserved : 6;	/* bit[31:26]	*/
 	} b;
 };
 
@@ -80,31 +80,35 @@ static const struct ast2600_pll_desc ast2600_pll_lookup[] = {
 		.cfg.reg.b.n = 2,
 		.cfg.reg.b.p = 1,
 		.cfg.ext_reg = 0x31,
+	}, {
+		.in = AST2600_CLK_IN,
+		.out = 200000000,
+		.cfg.reg.b.m = 127,
+		.cfg.reg.b.n = 0,
+		.cfg.reg.b.p = 15,
+		.cfg.ext_reg = 0x3f,
+	}, {
+		.in = AST2600_CLK_IN,
+		.out = 334000000,
+		.cfg.reg.b.m = 667,
+		.cfg.reg.b.n = 4,
+		.cfg.reg.b.p = 9,
+		.cfg.ext_reg = 0x14d,
+	}, {
+		.in = AST2600_CLK_IN,
+		.out = 1000000000,
+		.cfg.reg.b.m = 119,
+		.cfg.reg.b.n = 2,
+		.cfg.reg.b.p = 0,
+		.cfg.ext_reg = 0x3d,
+	}, {
+		.in = AST2600_CLK_IN,
+		.out = 50000000,
+		.cfg.reg.b.m = 95,
+		.cfg.reg.b.n = 2,
+		.cfg.reg.b.p = 15,
+		.cfg.ext_reg = 0x31,
 	},
-	{ .in = AST2600_CLK_IN,
-	  .out = 200000000,
-	  .cfg.reg.b.m = 127,
-	  .cfg.reg.b.n = 0,
-	  .cfg.reg.b.p = 15,
-	  .cfg.ext_reg = 0x3f },
-	{ .in = AST2600_CLK_IN,
-	  .out = 334000000,
-	  .cfg.reg.b.m = 667,
-	  .cfg.reg.b.n = 4,
-	  .cfg.reg.b.p = 9,
-	  .cfg.ext_reg = 0x14d },
-	{ .in = AST2600_CLK_IN,
-	  .out = 1000000000,
-	  .cfg.reg.b.m = 119,
-	  .cfg.reg.b.n = 2,
-	  .cfg.reg.b.p = 0,
-	  .cfg.ext_reg = 0x3d },
-	{ .in = AST2600_CLK_IN,
-	  .out = 50000000,
-	  .cfg.reg.b.m = 95,
-	  .cfg.reg.b.n = 2,
-	  .cfg.reg.b.p = 15,
-	  .cfg.ext_reg = 0x31 },
 };
 
 extern u32 ast2600_get_pll_rate(struct ast2600_scu *scu, int pll_idx)
@@ -637,10 +641,10 @@ static ulong ast2600_clk_set_rate(struct clk *clk, ulong rate)
 	return new_rate;
 }
 
-#define SCU_CLKSTOP_MAC1 (20)
-#define SCU_CLKSTOP_MAC2 (21)
-#define SCU_CLKSTOP_MAC3 (20)
-#define SCU_CLKSTOP_MAC4 (21)
+#define SCU_CLKSTOP_MAC1	(20)
+#define SCU_CLKSTOP_MAC2	(21)
+#define SCU_CLKSTOP_MAC3	(20)
+#define SCU_CLKSTOP_MAC4	(21)
 
 static u32 ast2600_configure_mac12_clk(struct ast2600_scu *scu)
 {
@@ -711,26 +715,26 @@ static u32 ast2600_configure_mac34_clk(struct ast2600_scu *scu)
  * |
  * +--------------------------->RGMII 125M for MAC#3 & MAC#4
  */
-#define RGMIICK_SRC_PAD 0
-#define RGMIICK_SRC_EPLL 1 /* recommended */
-#define RGMIICK_SRC_HPLL 2
+#define RGMIICK_SRC_PAD		0
+#define RGMIICK_SRC_EPLL	1 /* recommended */
+#define RGMIICK_SRC_HPLL	2
 
-#define RGMIICK_DIV2 1
-#define RGMIICK_DIV3 2
-#define RGMIICK_DIV4 3
-#define RGMIICK_DIV5 4
-#define RGMIICK_DIV6 5
-#define RGMIICK_DIV7 6
-#define RGMIICK_DIV8 7 /* recommended */
+#define RGMIICK_DIV2	1
+#define RGMIICK_DIV3	2
+#define RGMIICK_DIV4	3
+#define RGMIICK_DIV5	4
+#define RGMIICK_DIV6	5
+#define RGMIICK_DIV7	6
+#define RGMIICK_DIV8	7 /* recommended */
 
-#define RMIICK_DIV4 0
-#define RMIICK_DIV8 1
-#define RMIICK_DIV12 2
-#define RMIICK_DIV16 3
-#define RMIICK_DIV20 4 /* recommended */
-#define RMIICK_DIV24 5
-#define RMIICK_DIV28 6
-#define RMIICK_DIV32 7
+#define RMIICK_DIV4		0
+#define RMIICK_DIV8		1
+#define RMIICK_DIV12	2
+#define RMIICK_DIV16	3
+#define RMIICK_DIV20	4 /* recommended */
+#define RMIICK_DIV24	5
+#define RMIICK_DIV28	6
+#define RMIICK_DIV32	7
 
 struct ast2600_mac_clk_div {
 	u32 src; /* 0=external PAD, 1=internal PLL */
@@ -900,9 +904,9 @@ static u32 ast2600_configure_mac(struct ast2600_scu *scu, int index)
 	return 0;
 }
 
-#define SCU_CLK_ECC_RSA_FROM_HPLL_CLK BIT(19)
-#define SCU_CLK_ECC_RSA_CLK_MASK GENMASK(27, 26)
-#define SCU_CLK_ECC_RSA_CLK_DIV(x) ((x) << 26)
+#define SCU_CLK_ECC_RSA_FROM_HPLL_CLK	BIT(19)
+#define SCU_CLK_ECC_RSA_CLK_MASK		GENMASK(27, 26)
+#define SCU_CLK_ECC_RSA_CLK_DIV(x)		((x) << 26)
 static void ast2600_configure_rsa_ecc_clk(struct ast2600_scu *scu)
 {
 	u32 clk_sel = readl(&scu->clk_sel1);
@@ -935,10 +939,10 @@ static ulong ast2600_enable_sdclk(struct ast2600_scu *scu)
 	return 0;
 }
 
-#define SCU_CLKSTOP_EXTSD 31
-#define SCU_CLK_SD_MASK (0x7 << 28)
-#define SCU_CLK_SD_DIV(x) ((x) << 28)
-#define SCU_CLK_SD_FROM_APLL_CLK BIT(8)
+#define SCU_CLKSTOP_EXTSD			31
+#define SCU_CLK_SD_MASK				(0x7 << 28)
+#define SCU_CLK_SD_DIV(x)			((x) << 28)
+#define SCU_CLK_SD_FROM_APLL_CLK	BIT(8)
 
 static ulong ast2600_enable_extsdclk(struct ast2600_scu *scu)
 {
@@ -988,10 +992,10 @@ static ulong ast2600_enable_emmcclk(struct ast2600_scu *scu)
 	return 0;
 }
 
-#define SCU_CLKSTOP_EXTEMMC 15
-#define SCU_CLK_EMMC_MASK (0x7 << 12)
-#define SCU_CLK_EMMC_DIV(x) ((x) << 12)
-#define SCU_CLK_EMMC_FROM_MPLL_CLK BIT(11)
+#define SCU_CLKSTOP_EXTEMMC			15
+#define SCU_CLK_EMMC_MASK			(0x7 << 12)
+#define SCU_CLK_EMMC_DIV(x)			((x) << 12)
+#define SCU_CLK_EMMC_FROM_MPLL_CLK	BIT(11)
 
 static ulong ast2600_enable_extemmcclk(struct ast2600_scu *scu)
 {
