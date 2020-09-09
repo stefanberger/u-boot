@@ -13,20 +13,6 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-/* LPC register offset */
-#define LPC_BASE	0x1e789000
-#define HICR0	0x000
-#define 	HICR0_LPC3E		BIT(7)
-#define LADR3H	0x014
-#define LADR3L	0x018
-#define HICR5	0x080
-#define 	HICR5_EN_SNP0W	BIT(0)
-#define SNPWADR	0x090
-#define 	SNPWADR_ADDR0_MASK	GENMASK(15, 0)
-#define 	SNPWADR_ADDR0_SHIFT	0
-#define HICRB	0x100
-#define 	HICRB_ENSNP0D	BIT(14)
-
 __weak int board_init(void)
 {
 	struct udevice *dev;
@@ -118,52 +104,8 @@ __weak int dram_init(void)
 	return 0;
 }
 
-static void init_snoop_port80h(void)
-{
-	uint32_t reg;
-
-	reg = readl(LPC_BASE + SNPWADR);
-	reg &= ~SNPWADR_ADDR0_MASK;
-	reg |= 0x80;
-	writel(reg, LPC_BASE + SNPWADR);
-
-	reg = readl(LPC_BASE + HICRB);
-	reg |= HICRB_ENSNP0D;
-	writel(reg, LPC_BASE + HICRB);
-
-	reg = readl(LPC_BASE + HICR5);
-	reg |= HICR5_EN_SNP0W;
-	writel(reg, LPC_BASE + HICR5);
-}
-
-static void init_kcs_portCA2h(void)
-{
-	uint32_t reg;
-
-	writel(0xA2, LPC_BASE + LADR3L);
-	writel(0xC, LPC_BASE + LADR3H);
-
-	reg = readl(LPC_BASE + HICR0);
-	reg |= HICR0_LPC3E;
-	writel(reg, LPC_BASE + HICR0);
-}
-
 int arch_early_init_r(void)
 {
-	/*
-	 * AST2500/AST2600 SW workaround:
-	 * When eSPI-LPC bridge HW stays in the LPC I/O port
-	 * decoding error state, controllers behind the bridge
-	 * cannot be enabled. Thereby, these controller should
-	 * be enabled early to avoid the decoding error.
-	 *
-	 * This workaround enables only the controllers which
-	 * commonly interacts with Host at the early stage.
-	 * Namely, the debug@80h and the KCS@CA2h.
-	 */
-	init_snoop_port80h();
-	init_kcs_portCA2h();
-
 #ifdef CONFIG_DM_PCI
 	/* Trigger PCIe devices detection */
 	pci_init();
@@ -171,3 +113,4 @@ int arch_early_init_r(void)
 
 	return 0;
 }
+
