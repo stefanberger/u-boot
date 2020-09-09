@@ -145,32 +145,6 @@ static void init_kcs_portCA2h(void)
 	writel(reg, LPC_BASE + HICR0);
 }
 
-static void init_espi(void)
-{
-	uint32_t reg;
-
-	reg = readl(0x1e6ee000);
-	reg &= ~0xef;
-	reg |= 0xef;
-	writel(reg, 0x1e6ee000);
-
-	writel(0x0, 0x1e6ee110);
-	writel(0x0, 0x1e6ee114);
-
-	writel(0x80000000, 0x1e6ee00c);
-	writel(0xffffffff, 0x1e6ee094);
-	writel(0x1, 0x1e6ee100);
-	writel(0x1, 0x1e6ee120);
-
-	reg = readl(0x1e6ee080);
-	reg &= ~(0x1 << 4 | 0x1 << 6);
-	writel(reg, 0x1e6ee080);
-
-	reg = readl(0x1e6ee000);
-	reg |= (0x1 << 4);
-	writel(reg, 0x1e6ee000);
-}
-
 int arch_early_init_r(void)
 {
 	/*
@@ -186,13 +160,6 @@ int arch_early_init_r(void)
 	 */
 	init_snoop_port80h();
 	init_kcs_portCA2h();
-
-	/*
-	 * eSPI early init. to prevent PCH booting hang.
-	 * Note that the eSPI functionality is not fully
-	 * supported here.
-	 */
-	init_espi();
 
 #ifdef CONFIG_DM_PCI
 	/* Trigger PCIe devices detection */
