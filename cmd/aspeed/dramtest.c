@@ -26,6 +26,22 @@ DECLARE_GLOBAL_DATA_PTR;
 #define DRAM_BASE	0x80000000
 #define TIMEOUT_DRAM	5000000
 
+#ifdef CONFIG_ASPEED_AST2600
+#define BLK_SIZE_MB				64
+#define N_BLK					32
+#define MCR74_BLK_OFFSET		26
+#define MCR74_LEN_OFFSET		4
+#define MCR74_BLK_LEN_MASK		GENMASK(30, 4)
+#else
+#define BLK_SIZE_MB				16
+#define N_BLK					64
+#define MCR74_BLK_OFFSET		24
+#define MCR74_LEN_OFFSET		4
+#define MCR74_BLK_LEN_MASK		GENMASK(29, 4)
+#endif
+#define BLK_SIZE				(BLK_SIZE_MB * 1024 * 1024)
+#define N_16B_IN_BLK			(BLK_SIZE / 16)
+
 /* ------------------------------------------------------------------------- */
 int MMCTestBurst(unsigned int datagen)
 {
@@ -119,17 +135,17 @@ static void print_usage(void)
 	printf("        0: infinite loop.\n");
 	printf("block:  index of the address block to test "
 			"(optional, in decimal, default: 0)\n");
-	printf("        0: [8000_0000, 8400_0000)\n");
-	printf("        1: [8400_0000, 8800_0000)\n");
-	printf("        2: [8800_0000, 8C00_0000)\n");
-	printf("        n: [8000_0000 + n*64MB, 8000_0000 + (n+1)*64MB)\n");
-	printf("           where n = [0, 31]\n");
+	printf("        0: [%08x, %08x)\n", DRAM_BASE + BLK_SIZE * 0, DRAM_BASE + BLK_SIZE * 1);
+	printf("        1: [%08x, %08x)\n", DRAM_BASE + BLK_SIZE * 1, DRAM_BASE + BLK_SIZE * 2);
+	printf("        2: [%08x, %08x)\n", DRAM_BASE + BLK_SIZE * 2, DRAM_BASE + BLK_SIZE * 3);
+	printf("        n: [80000000 + n*%dMB, 80000000 + (n+1)*%dMB)\n", BLK_SIZE_MB, BLK_SIZE_MB);
+	printf("           where n = [0, %d]\n", N_BLK - 1);
 	printf("length: size to test (optional, in hex, default: 0x10000)\n");
-	printf("        0x0: test the whole memory block 64MB\n");
+	printf("        0x0: test the whole memory block %dMB\n", BLK_SIZE_MB);
 	printf("        0x1: test the first 16 Bytes of the memory block\n");
 	printf("        0x2: test the first 2*16 Bytes of the memory block\n");
 	printf("        n  : test the first n*16 Bytes of the memory block\n");
-	printf("             where n = [0x00_0001, 0x3F_FFFF]\n");
+	printf("             where n = [0x00000001, 0x%08x]\n", N_16B_IN_BLK - 1);
 	printf("\n\n");
 }
 
@@ -161,14 +177,15 @@ do_ast_dramtest(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 		break;
 	}
 
-	printf("Test range: 0x%08lx - 0x%08lx\n", DRAM_BASE + (block << 26),
-	       DRAM_BASE + (block << 26) + (length << 4));
+	printf("Test range: 0x%08lx - 0x%08lx\n", DRAM_BASE + (block << MCR74_BLK_OFFSET),
+	       DRAM_BASE + (block << MCR74_BLK_OFFSET) + (length << 4) + 15);
 
 	ret = 1;
 	writel(0xFC600309, 0x1E6E0000);
 	while ((Testcounter > PassCnt) || (Testcounter == 0)) {
-		clrsetbits_le32(0x1E6E0074, GENMASK(30, 4),
-				(block << 26) | (length << 4));
+		clrsetbits_le32(0x1E6E0074, MCR74_BLK_LEN_MASK,
+				(block << MCR74_BLK_OFFSET) | (length << MCR74_LEN_OFFSET));
+
 		if (!MMCTest()) {
 			printf("FAIL %d/%ld (fail DQ 0x%08x)\n", PassCnt,
 			       Testcounter, readl(0x1E6E0078));
