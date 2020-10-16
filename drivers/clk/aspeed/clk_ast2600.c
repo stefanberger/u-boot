@@ -49,11 +49,11 @@ DECLARE_GLOBAL_DATA_PTR;
  * yet needed and ignored by clock configurations.
  */
 union ast2600_pll_reg {
-	unsigned int w;
+	u32 w;
 	struct {
 		unsigned int m : 13;		/* bit[12:0]	*/
-		unsigned int n : 6;			/* bit[18:13]	*/
-		unsigned int p : 4;			/* bit[22:19]	*/
+		unsigned int n : 6;		/* bit[18:13]	*/
+		unsigned int p : 4;		/* bit[22:19]	*/
 		unsigned int off : 1;		/* bit[23]	*/
 		unsigned int bypass : 1;	/* bit[24]	*/
 		unsigned int reset : 1;		/* bit[25]	*/
@@ -63,7 +63,7 @@ union ast2600_pll_reg {
 
 struct ast2600_pll_cfg {
 	union ast2600_pll_reg reg;
-	unsigned int ext_reg;
+	u32 ext_reg;
 };
 
 struct ast2600_pll_desc {
