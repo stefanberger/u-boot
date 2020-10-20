@@ -511,7 +511,7 @@ static int otp_prog_verify_2dw(uint32_t *data, uint32_t *buf, uint32_t *ignore_m
 				otp_prog_dw(compare[0], ignore_mask[0], prog_address);
 			}
 			if (compare[1] != ~0) {
-				otp_prog_dw(compare[1], ignore_mask[0], prog_address + 1);
+				otp_prog_dw(compare[1], ignore_mask[1], prog_address + 1);
 			}
 			if (verify_dw(prog_address, buf, ignore_mask, compare, 2) != 0) {
 				otp_soak(1);
