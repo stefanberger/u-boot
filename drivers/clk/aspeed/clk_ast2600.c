@@ -213,7 +213,7 @@ extern u32 ast2600_get_apll_rate(struct ast2600_scu *scu)
 	u32 apll_reg = readl(&scu->a_pll_param);
 	unsigned int mult, div = 1;
 
-	if (((hw_rev & CHIP_REVISION_ID) >> 16) >= 3) {
+	if (((hw_rev & CHIP_REVISION_ID) >> 16) >= 2) {
 		//after A2 version
 		if (apll_reg & BIT(24)) {
 			/* Pass through mode */
@@ -228,7 +228,6 @@ extern u32 ast2600_get_apll_rate(struct ast2600_scu *scu)
 			mult = (m + 1);
 			div = (n + 1) * (p + 1);
 		}
-
 	} else {
 		if (apll_reg & BIT(20)) {
 			/* Pass through mode */
