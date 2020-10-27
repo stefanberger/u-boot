@@ -25,7 +25,7 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-#define OTP_VER				"1.0.0"
+#define OTP_VER				"1.0.1"
 
 #define OTP_PASSWD			0x349fe38a
 #define RETRY				3
@@ -70,7 +70,7 @@ DECLARE_GLOBAL_DATA_PTR;
 
 #define OTP_AST2600A0		0
 #define OTP_AST2600A1		1
-#define OTP_AST2600A2		7 // fpga
+#define OTP_AST2600A2		2
 
 struct otp_header {
 	u8	otp_magic[8];
@@ -161,16 +161,26 @@ static const struct otpkey_type a2_key_type[] = {
 	{14, OTP_KEY_TYPE_RSA,  0, "RSA-private as AES key decryption key"},
 };
 
-static uint32_t chip_version(void)
+static uint32_t  chip_version(void)
 {
-	uint32_t rev_id;
+	uint32_t rev_id[2];
 
-	rev_id = readl(0x1e6e2014);
+	rev_id[0] = readl(0x1e6e2004);
+	rev_id[1] = readl(0x1e6e2014);
 
-	if (((rev_id >> 24) & 0xf) != 0x5)
-		return -1;
+	if (rev_id[0] == 0x05000303 && rev_id[1] == 0x05000303) {
+		return OTP_AST2600A0;
+	} else if (rev_id[0] == 0x05010303 && rev_id[1] == 0x05010303) {
+		return OTP_AST2600A1;
+	} else if (rev_id[0] == 0x05010303 && rev_id[1] == 0x05020303) {
+		return OTP_AST2600A2;
+	} else if (rev_id[0] == 0x05010203 && rev_id[1] == 0x05010203) {
+		return OTP_AST2600A1;
+	} else if (rev_id[0] == 0x05010203 && rev_id[1] == 0x05020203) {
+		return OTP_AST2600A2;
+	}
 
-	return (rev_id >> 16) & 0xf;
+	return -1;
 }
 
 static void wait_complete(void)
@@ -2010,6 +2020,7 @@ static cmd_tbl_t cmd_otp[] = {
 static int do_ast_otp(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 {
 	cmd_tbl_t *cp;
+	uint32_t ver;
 
 	cp = find_cmd_tbl(argv[1], cmd_otp, ARRAY_SIZE(cmd_otp));
 
@@ -2022,7 +2033,9 @@ static int do_ast_otp(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 	if (flag == CMD_FLAG_REPEAT && !cmd_is_repeatable(cp))
 		return CMD_RET_SUCCESS;
 
-	if (chip_version() == OTP_AST2600A0) {
+	ver = chip_version();
+	switch (ver) {
+	case OTP_AST2600A0:
 		info_cb.version = OTP_AST2600A0;
 		info_cb.conf_info = a0_conf_info;
 		info_cb.conf_info_len = ARRAY_SIZE(a0_conf_info);
@@ -2030,7 +2043,8 @@ static int do_ast_otp(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 		info_cb.strap_info_len = ARRAY_SIZE(a0_strap_info);
 		info_cb.key_info = a0_key_type;
 		info_cb.key_info_len = ARRAY_SIZE(a0_key_type);
-	} else if (chip_version() == OTP_AST2600A1) {
+		break;
+	case OTP_AST2600A1:
 		info_cb.version = OTP_AST2600A1;
 		info_cb.conf_info = a1_conf_info;
 		info_cb.conf_info_len = ARRAY_SIZE(a1_conf_info);
@@ -2038,7 +2052,8 @@ static int do_ast_otp(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 		info_cb.strap_info_len = ARRAY_SIZE(a1_strap_info);
 		info_cb.key_info = a1_key_type;
 		info_cb.key_info_len = ARRAY_SIZE(a1_key_type);
-	} else if (chip_version() == OTP_AST2600A2) {
+		break;
+	case OTP_AST2600A2:
 		info_cb.version = OTP_AST2600A2;
 		info_cb.conf_info = a2_conf_info;
 		info_cb.conf_info_len = ARRAY_SIZE(a2_conf_info);
@@ -2046,6 +2061,9 @@ static int do_ast_otp(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 		info_cb.strap_info_len = ARRAY_SIZE(a2_strap_info);
 		info_cb.key_info = a2_key_type;
 		info_cb.key_info_len = ARRAY_SIZE(a2_key_type);
+		break;
+	default:
+		return CMD_RET_FAILURE;
 	}
 
 	return cp->cmd(cmdtp, flag, argc, argv);
