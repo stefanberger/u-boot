@@ -1020,26 +1020,26 @@ void FPri_End (MAC_ENGINE *eng, uint8_t option)
 			PRINTF( option, "\n[Warning] PHY Address change from %d to %d !!!\n", eng->arg.phy_addr, eng->phy.Adr );
 	}
 
-	//------------------------------
-	//[Warning] IO Strength
-	//------------------------------
+	/* [Warning] IO Strength */
+	if (eng->io.init_done) {
 #ifdef CONFIG_ASPEED_AST2600
-	if (eng->io.init_done && (eng->io.mac34_drv_reg.value.w != 0xf)) {
-		PRINTF(option,
-		       "\n[Warning] [%08X] 0x%08x is not the suggestion value "
-		       "0xf.\n",
-		       eng->io.mac34_drv_reg.addr,
-		       eng->io.mac34_drv_reg.value.w);
+		if ((eng->io.mac34_drv_reg.value.b.mac3_tx_drv != 0x3) ||
+		    (eng->io.mac34_drv_reg.value.b.mac4_tx_drv != 0x3)) {
+			PRINTF(option,
+			       "\n[Warning] [%08x] bit[3:0] 0x%02x is not the recommended value "
+			       "0xf.\n",
+			       eng->io.mac34_drv_reg.addr,
+			       eng->io.mac34_drv_reg.value.w & 0xf);
+		}
 #else
-	if (eng->io.init_done && eng->io.mac12_drv_reg.value.w) {
-		PRINTF(option,
-		       "\n[Warning] [%08X] 0x%08x is not the suggestion value "
-		       "0.\n",
-		       eng->io.mac12_drv_reg.addr,
-		       eng->io.mac12_drv_reg.value.w);
-#endif	
-		PRINTF(option, "          This change at this platform must "
-			       "been proven again by the ASPEED.\n");
+		if (eng->io.mac12_drv_reg.value.w) {
+			PRINTF(option,
+			       "\n[Warning] [%08X] 0x%08x is not the recommended value "
+			       "0.\n",
+			       eng->io.mac12_drv_reg.addr,
+			       eng->io.mac12_drv_reg.value.w);
+		}
+#endif
 	}
 
 	//------------------------------
