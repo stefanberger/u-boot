@@ -250,14 +250,14 @@ static int ast2600_sdramphy_check_status(struct dram_info *info)
 
 	debug("\nSDRAM PHY training report:\n");
 	/* training status */
-        value = readl(reg_base + 0x00);
+	value = readl(reg_base + 0x00);
 	debug("rO_DDRPHY_reg offset 0x00 = 0x%08x\n", value);
-        if (value & BIT(3)) {
-                debug("\tinitial PVT calibration fail\n");
-        }
-        if (value & BIT(5)) {
-                debug("\truntime calibration fail\n");
-        }
+	if (value & BIT(3)) {
+		debug("\tinitial PVT calibration fail\n");
+	}
+	if (value & BIT(5)) {
+		debug("\truntime calibration fail\n");
+	}
 
 	/* PU & PD */
 	value = readl(reg_base + 0x30);
