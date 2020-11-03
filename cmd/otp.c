@@ -211,15 +211,15 @@ static void otp_soak(int soak)
 			break;
 		case 1: //normal program
 			otp_write(0x3000, 0x1200); // Write MRA
-			otp_write(0x5000, 0x100F); // Write MRB
+			otp_write(0x5000, 0x107F); // Write MRB
 			otp_write(0x1000, 0x1024); // Write MR
-			writel(0x04190760, OTP_TIMING);
+			writel(0x04191388, OTP_TIMING); // 200us
 			break;
 		case 2: //soak program
 			otp_write(0x3000, 0x1220); // Write MRA
-			otp_write(0x5000, 0x2004); // Write MRB
+			otp_write(0x5000, 0x2074); // Write MRB
 			otp_write(0x1000, 0x08a4); // Write MR
-			writel(0x041930d4, OTP_TIMING);
+			writel(0x04193a98, OTP_TIMING); // 600us
 			break;
 		}
 	} else {
@@ -233,13 +233,13 @@ static void otp_soak(int soak)
 			otp_write(0x3000, 0x4021); // Write MRA
 			otp_write(0x5000, 0x302f); // Write MRB
 			otp_write(0x1000, 0x4020); // Write MR
-			writel(0x04190760, OTP_TIMING);
+			writel(0x04190760, OTP_TIMING); // 75us
 			break;
 		case 2: //soak program
 			otp_write(0x3000, 0x4021); // Write MRA
 			otp_write(0x5000, 0x1027); // Write MRB
 			otp_write(0x1000, 0x4820); // Write MR
-			writel(0x041930d4, OTP_TIMING);
+			writel(0x041930d4, OTP_TIMING); // 500us
 			break;
 		}
 	}
@@ -1135,7 +1135,7 @@ static int otp_prog_conf(struct otp_image_layout *image_layout)
 		for (k = 0; k < RETRY; k++) {
 			if (verify_dw(prog_address, &conf[i], &conf_ignore[i], compare, 1) != 0) {
 				otp_soak(2);
-				otp_prog_dw(compare[0], prog_address, 1);
+				otp_prog_dw(compare[0], conf_ignore[i], prog_address);
 				if (verify_dw(prog_address, &conf[i], &conf_ignore[i], compare, 1) != 0) {
 					otp_soak(1);
 				} else {
