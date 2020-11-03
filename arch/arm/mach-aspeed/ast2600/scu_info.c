@@ -114,8 +114,55 @@ int aspeed_get_mac_phy_interface(u8 num)
 
 void aspeed_print_security_info(void)
 {
-	if(readl(ASPEED_HW_STRAP1) & BIT(1))
-		printf("Security Boot \n");
+	u32 qsr = readl(ASPEED_OTP_QSR);
+	u32 sb_sts = readl(ASPEED_SB_STS);
+	u32 hash;
+	u32 rsa;
+	char alg[20];
+
+	if (!(sb_sts & BIT(6)))
+		return;
+	printf("Secure Boot: ");
+	if (qsr & BIT(7)) {
+		hash = (qsr >> 10) & 3;
+		rsa = (qsr >> 12) & 3;
+
+		if (qsr & BIT(27)) {
+			sprintf(alg + strlen(alg), "AES_");
+		}
+		switch (rsa) {
+		case 0:
+			sprintf(alg + strlen(alg), "RSA1024_");
+			break;
+		case 1:
+			sprintf(alg + strlen(alg), "RSA2048_");
+			break;
+		case 2:
+			sprintf(alg + strlen(alg), "RSA3072_");
+			break;
+		default:
+			sprintf(alg + strlen(alg), "RSA4096_");
+			break;
+		}
+		switch (hash) {
+		case 0:
+			sprintf(alg + strlen(alg), "SHA224");
+			break;
+		case 1:
+			sprintf(alg + strlen(alg), "SHA256");
+			break;
+		case 2:
+			sprintf(alg + strlen(alg), "SHA384");
+			break;
+		default:
+			sprintf(alg + strlen(alg), "SHA512");
+			break;
+		}
+		printf("Mode_2, %s\n", alg);
+	} else {
+		printf("Mode_GCM\n");
+		return;
+	}
 }	
 
 /*	ASPEED_SYS_RESET_CTRL	: System reset contrl/status register*/
