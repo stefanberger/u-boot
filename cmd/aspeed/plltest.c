@@ -67,9 +67,9 @@ static int cal_ast2600_28nm_pll_rate(unsigned long pll_rate, unsigned int pll_id
     ulHighLimit = ulCounter * (100 + ulErrRate) / 100;
 	writel((ulLowLimit << 16) | ulHighLimit, 0x1e6e2324);
 //	printf("ulCounter %lx , ulLowLimit %lx , ulHighLimit  %lx \n", ulCounter, ulLowLimit, ulHighLimit);
-		
-	//1. Set SCU320 = 0x30
-	writel(0x30, 0x1e6e2320);
+
+	//1. Set SCU320 = 0x24 use hclk reset freq measurement counter
+	writel(0x24, 0x1e6e2320);
 	//2. Wait until SCU320[29:16] = 0
     do {
         ulData = readl(0x1e6e2320);
@@ -99,7 +99,7 @@ static int cal_ast2600_28nm_pll_rate(unsigned long pll_rate, unsigned int pll_id
     {
         printf("PLL Detec No idle %x\n", ulData);
         return 1;
-    }	
+    }
 
 	//7. Read SCU320[29:16] and calculate the result frequency using following equation
 //	printf("ulCounter val : %lx \n", (readl(0x1e6e2320) & GENMASK(29, 16)) >> 16);
