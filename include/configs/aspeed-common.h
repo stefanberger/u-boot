@@ -10,6 +10,8 @@
 #define __ASPEED_COMMON_CONFIG_H
 
 #include <asm/arch/platform.h>
+#include <linux/sizes.h>
+
 
 #define CONFIG_BOOTFILE		"all.bin"
 
@@ -25,7 +27,11 @@
 #define CONFIG_SETUP_MEMORY_TAGS
 #define CONFIG_INITRD_TAG
 
-#define CONFIG_SYS_SDRAM_BASE		ASPEED_DRAM_BASE
+#ifdef CONFIG_ASPEED_AST2605
+#define CONFIG_SYS_SDRAM_BASE		(ASPEED_DRAM_BASE + SZ_32M)
+#else
+#define CONFIG_SYS_SDRAM_BASE		(ASPEED_DRAM_BASE)
+#endif
 
 #ifdef CONFIG_PRE_CON_BUF_SZ
 #define CONFIG_SYS_INIT_RAM_ADDR	(ASPEED_SRAM_BASE + CONFIG_PRE_CON_BUF_SZ)

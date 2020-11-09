@@ -45,6 +45,9 @@ config ASPEED_AST2600
 	  which is enabled by support of LPC and eSPI peripherals.
 endchoice
 
+config ASPEED_AST2605
+	bool "Support Aspeed AST2605 boot"
+
 config ASPEED_PALLADIUM
 	bool "Aspeed palladium for simulation"
 	default n
