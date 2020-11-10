@@ -15,7 +15,6 @@
 #include <asm/arch/scu_ast2600.h>
 #include <asm/arch/sdram_ast2600.h>
 #include <linux/err.h>
-#include <linux/sizes.h>
 #include <linux/kernel.h>
 #include <dt-bindings/clock/ast2600-clock.h>
 #include "sdram_phy_ast2600.h"
@@ -662,11 +661,8 @@ static void ast2600_sdrammc_calc_size(struct dram_info *info)
 			 << SDRAM_AC_TRFC_SHIFT));
 
 	info->info.base = CONFIG_SYS_SDRAM_BASE;
-#ifdef CONFIG_ASPEED_AST2605
-	info->info.size = ram_size - ast2600_sdrammc_get_vga_mem_size(info) - SZ_32M;
-#else
-	info->info.size = ram_size - ast2600_sdrammc_get_vga_mem_size(info);
-#endif
+	info->info.size = ram_size - ast2600_sdrammc_get_vga_mem_size(info) - CONFIG_ASPEED_SSP_RERV_MEM;
+
 	clrsetbits_le32(
 	    &info->regs->config, SDRAM_CONF_CAP_MASK,
 	    ((cap_param << SDRAM_CONF_CAP_SHIFT) & SDRAM_CONF_CAP_MASK));
