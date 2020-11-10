@@ -75,6 +75,14 @@ config ASPEED_SECURE_BOOT_DEBUG
 	help
 	  This option allows the bootm command use
 
+config ASPEED_UBOOT_MMC_PART
+	int "U-Boot eMMC partition"
+	default 0
+	help
+	  The partition number of the U-Boot
+	  image in the eMMC device. This is not
+	  the user data partition number.
+
 config ASPEED_UBOOT_SPI_BASE
 	hex "U-Boot SPI base address"
 	default 0x0

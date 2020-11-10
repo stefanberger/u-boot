@@ -80,4 +80,9 @@
 /* Uboot size */
 #define CONFIG_SYS_MONITOR_LEN (1024 * 1024)
 
+#ifdef CONFIG_ENV_IS_IN_MMC
+#define CONFIG_SYS_MMC_ENV_DEV		0
+#define CONFIG_SYS_MMC_ENV_PART		0
+#endif
+
 #endif	/* __ASPEED_COMMON_CONFIG_H */

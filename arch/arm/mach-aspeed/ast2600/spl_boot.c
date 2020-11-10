@@ -98,6 +98,7 @@ static int aspeed_secboot_spl_mmc_load_image(struct spl_image_info *spl_image,
 				      struct spl_boot_device *bootdev)
 {
 	int err;
+	int part = CONFIG_ASPEED_UBOOT_MMC_PART;
 	u32 count;
 
 	struct mmc *mmc = NULL;
@@ -134,6 +135,13 @@ static int aspeed_secboot_spl_mmc_load_image(struct spl_image_info *spl_image,
 	if (sizeof(*sb_hdr) != bd->blksz) {
 		printf("spl: secure boot header size must equal to mmc block size\n");
 		return -EINVAL;
+	}
+
+	if (part) {
+		if (CONFIG_IS_ENABLED(MMC_TINY))
+			err = mmc_switch_part(mmc, part);
+		else
+			err = blk_dselect_hwpart(bd, part);
 	}
 
 	sb_hdr = (struct aspeed_secboot_header *)CONFIG_ASPEED_UBOOT_DRAM_BASE - 1;
