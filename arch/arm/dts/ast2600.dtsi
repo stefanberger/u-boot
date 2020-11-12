@@ -428,12 +428,12 @@
 
 			gpio0: gpio@1e780000 {
 				compatible = "aspeed,ast2600-gpio";
-				reg = <0x1e780000 0x1000>;
+				reg = <0x1e780000 0x400>;
 				interrupts = <GIC_SPI 40 IRQ_TYPE_LEVEL_HIGH>;
 				#gpio-cells = <2>;
 				gpio-controller;
 				interrupt-controller;
-				gpio-ranges = <&pinctrl 0 0 220>;
+				gpio-ranges = <&pinctrl 0 0 208>;
 				ngpios = <208>;
 			};
 
@@ -444,7 +444,7 @@
 				#gpio-cells = <2>;
 				gpio-controller;
 				interrupt-controller;
-				gpio-ranges = <&pinctrl 0 0 208>;
+				gpio-ranges = <&pinctrl 0 208 36>;
 				ngpios = <36>;
 			};
 
