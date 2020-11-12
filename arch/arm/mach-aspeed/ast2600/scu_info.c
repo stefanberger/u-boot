@@ -301,22 +301,30 @@ void aspeed_print_dram_initializer(void)
 
 void aspeed_print_2nd_wdt_mode(void)
 {
-
+	/* ABR enable */
 	if (readl(ASPEED_HW_STRAP2) & BIT(11)) {
-		printf("FMC 2nd Boot (ABR): Enable");
-		if (readl(ASPEED_HW_STRAP2) & BIT(12))
-			printf(", Single flash");
-		else
-			printf(", Dual flashes");
+		/* boot from eMMC */
+		if (readl(ASPEED_HW_STRAP1) & BIT(2)) {
+			printf("eMMC 2nd Boot (ABR): Enable");
+			printf(", boot partition: %s", \
+				readl(ASPEED_EMMC_WDT_CTRL) & BIT(4) ? "2" : "1");
+			printf("\n");
+		} else { /* boot from SPI */
+			printf("FMC 2nd Boot (ABR): Enable");
+			if (readl(ASPEED_HW_STRAP2) & BIT(12))
+				printf(", Single flash");
+			else
+				printf(", Dual flashes");
 
-		printf(", Source: %s", \
-				readl(ASPEED_FMC_WDT2) & BIT(4) ? "Alternate" : "Primary");
+			printf(", Source: %s", \
+					readl(ASPEED_FMC_WDT2) & BIT(4) ? "Alternate" : "Primary");
 
-		if (readl(ASPEED_HW_STRAP2) & GENMASK(15, 13))
-			printf(", bspi_size: %ld MB", \
-				BIT((readl(ASPEED_HW_STRAP2) >> 13) & 0x7));
+			if (readl(ASPEED_HW_STRAP2) & GENMASK(15, 13))
+				printf(", bspi_size: %ld MB", \
+					BIT((readl(ASPEED_HW_STRAP2) >> 13) & 0x7));
 
-		printf("\n");
+			printf("\n");
+		}
 	}
 }
 
