@@ -163,20 +163,28 @@ static const struct otpkey_type a2_key_type[] = {
 
 static uint32_t  chip_version(void)
 {
-	uint32_t rev_id[2];
+	u64 rev_id;
 
-	rev_id[0] = readl(0x1e6e2004);
-	rev_id[1] = readl(0x1e6e2014);
+	rev_id = readl(ASPEED_REVISION_ID0);
+	rev_id = ((u64)readl(ASPEED_REVISION_ID1) << 32) | rev_id;
 
-	if (rev_id[0] == 0x05000303 && rev_id[1] == 0x05000303) {
+	if (rev_id == 0x0500030305000303) {
+		/* AST2600-A0 */
 		return OTP_AST2600A0;
-	} else if (rev_id[0] == 0x05010303 && rev_id[1] == 0x05010303) {
+	} else if (rev_id == 0x0501030305010303) {
+		/* AST2600-A1 */
 		return OTP_AST2600A1;
-	} else if (rev_id[0] == 0x05010303 && rev_id[1] == 0x05020303) {
+	} else if (rev_id == 0x0501020305010203) {
+		/* AST2620-A1 */
+		return OTP_AST2600A1;
+	} else if (rev_id == 0x0502030305010303) {
+		/* AST2600-A2 */
 		return OTP_AST2600A2;
-	} else if (rev_id[0] == 0x05010203 && rev_id[1] == 0x05010203) {
-		return OTP_AST2600A1;
-	} else if (rev_id[0] == 0x05010203 && rev_id[1] == 0x05020203) {
+	} else if (rev_id == 0x0502020305010203) {
+		/* AST2620-A2 */
+		return OTP_AST2600A2;
+	} else if (rev_id == 0x0502010305010103) {
+		/* AST2605-A2 */
 		return OTP_AST2600A2;
 	}
 
