@@ -85,7 +85,7 @@
 	phy-mode = "rgmii";
 	phy-handle = <&ethphy0>;
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_rgmii1_default &pinctrl_mac1link_default>;
+	pinctrl-0 = <&pinctrl_rgmii1_default>;
 };
 
 &mac1 {
@@ -93,7 +93,7 @@
 	phy-mode = "rgmii";
 	phy-handle = <&ethphy1>;
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_rgmii2_default &pinctrl_mac2link_default>;
+	pinctrl-0 = <&pinctrl_rgmii2_default>;
 };
 
 &mac2 {
@@ -101,7 +101,7 @@
 	phy-mode = "rgmii";
 	phy-handle = <&ethphy2>;
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_rgmii3_default &pinctrl_mac3link_default>;	
+	pinctrl-0 = <&pinctrl_rgmii3_default>;
 };
 
 &mac3 {
@@ -109,7 +109,7 @@
 	phy-mode = "rgmii";
 	phy-handle = <&ethphy3>;
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_rgmii4_default &pinctrl_mac4link_default>;	
+	pinctrl-0 = <&pinctrl_rgmii4_default>;
 };
 
 &fmc {
