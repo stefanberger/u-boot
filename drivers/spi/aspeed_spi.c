@@ -873,20 +873,21 @@ static int aspeed_spi_flash_init(struct aspeed_spi_priv *priv,
 	struct spi_slave *slave = dev_get_parent_priv(dev);
 	u32 read_hclk;
 
-
-	/*
-	 * The SPI flash device slave should not change, so initialize
-	 * it only once.
-	 */
-	if (flash->init)
-		return 0;
-
 	/*
 	 * The flash device has not been probed yet. Initial transfers
 	 * to read the JEDEC of the device will use the initial
 	 * default settings of the registers.
 	 */
 	if (!spi_flash->name)
+		return 0;
+
+	flash->spi = spi_flash;
+
+	/*
+	 * The SPI flash device slave should not change, so initialize
+	 * it only once.
+	 */
+	if (flash->init)
 		return 0;
 
 	debug("CS%u: init %s flags:%x size:%d page:%d sector:%d erase:%d "
@@ -897,8 +898,6 @@ static int aspeed_spi_flash_init(struct aspeed_spi_priv *priv,
 	      spi_flash->erase_size, spi_flash->erase_opcode,
 	      spi_flash->read_opcode, spi_flash->program_opcode,
 	      spi_flash->read_dummy);
-
-	flash->spi = spi_flash;
 
 	flash->ce_ctrl_user = CE_CTRL_USERMODE;
 
