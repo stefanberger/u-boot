@@ -873,6 +873,8 @@ static int aspeed_spi_flash_init(struct aspeed_spi_priv *priv,
 	struct spi_slave *slave = dev_get_parent_priv(dev);
 	u32 read_hclk;
 
+	flash->spi = spi_flash;
+
 	/*
 	 * The flash device has not been probed yet. Initial transfers
 	 * to read the JEDEC of the device will use the initial
@@ -880,8 +882,6 @@ static int aspeed_spi_flash_init(struct aspeed_spi_priv *priv,
 	 */
 	if (!spi_flash->name)
 		return 0;
-
-	flash->spi = spi_flash;
 
 	/*
 	 * The SPI flash device slave should not change, so initialize
