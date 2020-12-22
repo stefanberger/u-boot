@@ -918,7 +918,7 @@ static int aspeed_spi_flash_init(struct aspeed_spi_priv *priv,
 		case SPINOR_OP_READ_1_4_4:
 		case SPINOR_OP_READ_1_4_4_4B:
 			flash->iomode = CE_CTRL_IO_QUAD_ADDR_DATA;
-			printf("need modify dummy for 3 bytes");
+			printf("need modify dummy for 3 bytes\n");
 			break;
 	}
 

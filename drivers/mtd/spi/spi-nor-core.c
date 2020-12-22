@@ -1382,13 +1382,16 @@ static int spi_nor_read_sfdp(struct spi_nor *nor, u32 addr,
 			     size_t len, void *buf)
 {
 	u8 addr_width, read_opcode, read_dummy;
+	enum spi_nor_protocol	read_proto;
 	int ret;
 
 	read_opcode = nor->read_opcode;
 	addr_width = nor->addr_width;
 	read_dummy = nor->read_dummy;
+	read_proto = nor->read_proto;
 
 	nor->read_opcode = SPINOR_OP_RDSFDP;
+	nor->read_proto = SNOR_PROTO_1_1_1;
 	nor->addr_width = 3;
 	nor->read_dummy = 8;
 
@@ -1411,6 +1414,7 @@ read_err:
 	nor->read_opcode = read_opcode;
 	nor->addr_width = addr_width;
 	nor->read_dummy = read_dummy;
+	nor->read_proto = read_proto;
 
 	return ret;
 }
@@ -2162,9 +2166,15 @@ static int spi_nor_setup(struct spi_nor *nor, const struct flash_info *info,
 	shared_mask = hwcaps->mask & params->hwcaps.mask;
 
 	/* SPI n-n-n protocols are not supported yet. */
-	ignored_mask = (SNOR_HWCAPS_READ_2_2_2 |
+	ignored_mask = (SNOR_HWCAPS_READ_1_1_1_DTR |
+			SNOR_HWCAPS_READ_1_2_2 |
+			SNOR_HWCAPS_READ_1_2_2_DTR |
+			SNOR_HWCAPS_READ_2_2_2 |
+			SNOR_HWCAPS_READ_1_4_4 |
+			SNOR_HWCAPS_READ_1_4_4_DTR |
 			SNOR_HWCAPS_READ_4_4_4 |
 			SNOR_HWCAPS_READ_8_8_8 |
+			SNOR_HWCAPS_PP_1_4_4 |
 			SNOR_HWCAPS_PP_4_4_4 |
 			SNOR_HWCAPS_PP_8_8_8);
 	if (shared_mask & ignored_mask) {
