@@ -150,7 +150,7 @@ static const u32 ddr_max_grant_params[4] = {0x88888888, 0x88888888, 0x88888888,
 static const u32 ddr4_ac_timing[4] = {0x040e0307, 0x0f4711f1, 0x0e060304,
                                       0x00001240};
 
-static const u32 ddr_max_grant_params[4] = {0x44444444, 0x44444444, 0x44444444,
+static const u32 ddr_max_grant_params[4] = {0x44444444, 0x44444464, 0x44444444,
                                             0x44444444};
 #endif
 
