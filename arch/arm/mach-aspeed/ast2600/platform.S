@@ -75,8 +75,8 @@
 
 .macro timer_init
 #ifdef CONFIG_FPGA_ASPEED
-	movw	r0, #0xf080
-	movt	r0, #0x02fa
+	movw	r0, #0x6c00
+	movt	r0, #0x02dc
 #else
 	ldr	r0, =AST_SCU_REV_ID
 	ldr	r0, [r0]
