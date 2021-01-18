@@ -220,6 +220,17 @@ const struct flash_info spi_nor_ids[] = {
 	{ INFO("s25fl208k",  0x014014,      0,  64 * 1024,  16, SECT_4K | SPI_NOR_DUAL_READ) },
 	{ INFO("s25fl128l",  0x016018,      0,  64 * 1024, 256, SECT_4K | SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ | SPI_NOR_4B_OPCODES) },
 	{ INFO("s25fl256l",  0x016019,      0,  64 * 1024, 512, SECT_4K | SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ | SPI_NOR_4B_OPCODES) },
+	/* S25HL/HS-T (Semper Flash with Quad SPI) Family has overlaid 4KB
+	 * sectors at top and/or bottom, depending on the device configuration.
+	 * To support this, an erase hook makes overlaid sectors appear as
+	 * uniform sectors.
+	 */
+	{ INFO6("s25hl256t",  0x342a19, 0x0f0390, 256 * 1024, 128, SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ | SPI_NOR_4B_OPCODES |	USE_CLSR) },
+	{ INFO6("s25hl512t",  0x342a1a, 0x0f0390, 256 * 1024, 256, SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ | SPI_NOR_4B_OPCODES | USE_CLSR) },
+	{ INFO6("s25hl01gt",  0x342a1b, 0x0f0390, 256 * 1024, 512, SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ | SPI_NOR_4B_OPCODES |	USE_CLSR) },
+	{ INFO6("s25hs256t",  0x342b19, 0x0f0390, 256 * 1024, 128, SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ | SPI_NOR_4B_OPCODES |	USE_CLSR) },
+	{ INFO6("s25hs512t",  0x342b1a, 0x0f0390, 256 * 1024, 256, SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ | SPI_NOR_4B_OPCODES |	USE_CLSR) },
+	{ INFO6("s25hs01gt",  0x342b1b, 0x0f0390, 256 * 1024, 512, SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ | SPI_NOR_4B_OPCODES |	USE_CLSR) },
 #endif
 #ifdef CONFIG_SPI_FLASH_SST		/* SST */
 	/* SST -- large erase sizes are "overlays", "sectors" are 4K */
