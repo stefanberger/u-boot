@@ -1006,10 +1006,10 @@ static void ast2600_configure_rsa_ecc_clk(struct ast2600_scu *scu)
 {
 	u32 clk_sel = readl(&scu->clk_sel1);
 
-	/* Configure RSA clock = HPLL/3 */
+	/* Configure RSA clock = HPLL/4 */
 	clk_sel |= SCU_CLK_ECC_RSA_FROM_HPLL_CLK;
 	clk_sel &= ~SCU_CLK_ECC_RSA_CLK_MASK;
-	clk_sel |= SCU_CLK_ECC_RSA_CLK_DIV(2);
+	clk_sel |= SCU_CLK_ECC_RSA_CLK_DIV(3);
 
 	writel(clk_sel, &scu->clk_sel1);
 }
