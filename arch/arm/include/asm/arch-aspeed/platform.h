@@ -53,7 +53,7 @@
 #define ASPEED_MAC_COUNT	4
 #define ASPEED_DRAM_BASE	0x80000000
 #define ASPEED_SRAM_BASE	0x10000000
-#define ASPEED_SRAM_SIZE	0x10000
+#define ASPEED_SRAM_SIZE	0x16000
 #define ASPEED_FMC_CS0_BASE	0x20000000
 #else
 #err "No define for platform.h"
