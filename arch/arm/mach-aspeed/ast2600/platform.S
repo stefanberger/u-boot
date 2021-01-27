@@ -55,6 +55,9 @@
 #define AST_FMC_WDT1_CTRL_MODE	(AST_FMC_BASE + 0x060)
 #define AST_FMC_WDT2_CTRL_MODE	(AST_FMC_BASE + 0x064)
 
+#define AST_AHBC_BASE		(0x1E600000)
+#define AST_AHBC_ADDR_REMAP	(AST_AHBC_BASE + 0x8C)
+
 #define AST_GPIO_BASE		(0x1E780000)
 #define AST_GPIOYZ_DATA_VALUE	(AST_GPIO_BASE + 0x1E0)
 
@@ -232,6 +235,12 @@ wait_lock:
 	ldr	r0, =AST_SCU_HW_STRAP2
 	ldr	r1, [r0]
 	orr	r1, #0x40
+	str	r1, [r0]
+
+	/* disable address remapping to prevent secure boot failure */
+	ldr	r0, =AST_AHBC_ADDR_REMAP
+	ldr	r1, [r0]
+	bic	r1, #0x1
 	str	r1, [r0]
 
 2:
