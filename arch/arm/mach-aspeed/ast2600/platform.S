@@ -226,18 +226,6 @@ wait_lock:
 	bne	2f
 
 1:
-	/* LPC/eSPI mode selection by SW (AST2600/AST2620 A1 only) */
-	ldr	r0, =AST_GPIOYZ_DATA_VALUE
-	ldr	r0, [r0]
-	tst	r0, #0x1000
-	beq	2f
-
-	/* switch to LPC mode if GPIOZ[4]=1 */
-	ldr	r0, =AST_SCU_HW_STRAP2
-	ldr	r1, [r0]
-	orr	r1, #0x40
-	str	r1, [r0]
-
 	/* disable address remapping to prevent secure boot failure */
 	movw	r0, #0x1A03
 	movt	r0, #0xAEED
@@ -252,6 +240,18 @@ wait_lock:
 	mov	r0, #0x0
 	ldr	r1, =AST_AHBC_PROT_KEY
 	str	r0, [r1]
+
+	/* LPC/eSPI mode selection by SW (AST2600/AST2620 A1 only) */
+	ldr	r0, =AST_GPIOYZ_DATA_VALUE
+	ldr	r0, [r0]
+	tst	r0, #0x1000
+	beq	2f
+
+	/* switch to LPC mode if GPIOZ[4]=1 */
+	ldr	r0, =AST_SCU_HW_STRAP2
+	ldr	r1, [r0]
+	orr	r1, #0x40
+	str	r1, [r0]
 
 2:
 	/* MMIO decode setting */
