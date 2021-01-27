@@ -56,6 +56,7 @@
 #define AST_FMC_WDT2_CTRL_MODE	(AST_FMC_BASE + 0x064)
 
 #define AST_AHBC_BASE		(0x1E600000)
+#define AST_AHBC_PROT_KEY	(AST_AHBC_BASE)
 #define AST_AHBC_ADDR_REMAP	(AST_AHBC_BASE + 0x8C)
 
 #define AST_GPIO_BASE		(0x1E780000)
@@ -238,10 +239,19 @@ wait_lock:
 	str	r1, [r0]
 
 	/* disable address remapping to prevent secure boot failure */
+	movw	r0, #0x1A03
+	movt	r0, #0xAEED
+	ldr	r1, =AST_AHBC_PROT_KEY
+	str	r0, [r1]
+
 	ldr	r0, =AST_AHBC_ADDR_REMAP
 	ldr	r1, [r0]
 	bic	r1, #0x1
 	str	r1, [r0]
+
+	mov	r0, #0x0
+	ldr	r1, =AST_AHBC_PROT_KEY
+	str	r0, [r1]
 
 2:
 	/* MMIO decode setting */
