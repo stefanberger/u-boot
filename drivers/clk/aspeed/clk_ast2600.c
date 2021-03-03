@@ -440,11 +440,19 @@ static u32 ast2600_get_sdio_clk_rate(struct ast2600_scu *scu)
 
 static u32 ast2600_get_emmc_clk_rate(struct ast2600_scu *scu)
 {
-	u32 clkin = ast2600_get_pll_rate(scu, ASPEED_CLK_HPLL);
+	u32 mmc_clk_src = readl(&scu->clk_sel1);
+	u32 clkin;
 	u32 clk_sel = readl(&scu->clk_sel1);
 	u32 div = (clk_sel >> 12) & 0x7;
 
-	div = (div + 1) << 2;
+	if (mmc_clk_src & BIT(11)) {
+		/* emmc clock comes from MPLL */
+		clkin = ast2600_get_pll_rate(scu, ASPEED_CLK_MPLL);
+		div = (div + 1) * 2;
+	} else {
+		clkin = ast2600_get_pll_rate(scu, ASPEED_CLK_HPLL);
+		div = (div + 1) << 2;
+	}
 
 	return (clkin / div);
 }
