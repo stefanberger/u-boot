@@ -867,6 +867,10 @@ static uint32_t setup_running(MAC_ENGINE *p_eng)
 				break;
 			}
 		}
+
+		if (p_eng->arg.ctrl.b.single_packet)
+			p_eng->dat.Des_Num = 1;
+
 		/* keep in order: Des_Num -> DMABuf_Size -> DMABuf_Num */
 		p_eng->dat.Des_Num_Org = p_eng->dat.Des_Num;
 		p_eng->dat.DMABuf_Size = DMA_BufSize;
