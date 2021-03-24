@@ -202,6 +202,7 @@ static void wait_complete(void)
 
 static void otp_write(uint32_t otp_addr, uint32_t data)
 {
+	otp_write(0x0, data);
 	writel(otp_addr, OTP_ADDR); //write address
 	writel(data, OTP_COMPARE_1); //write data
 	writel(0x23b1e362, OTP_COMMAND); //write command
