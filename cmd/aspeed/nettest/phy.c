@@ -778,70 +778,22 @@ void phy_broadcom0 (MAC_ENGINE *eng) {//BCM54612
 
         if ( eng->run.tm_tx_only ) {
                 phy_basic_setting( eng );
-        }
-        else if ( eng->phy.loopback ) {
-                phy_basic_setting( eng );
-
-                // Enable Internal Loopback mode
-                // Page 58, BCM54612EB1KMLG_Spec.pdf
-                phy_write( eng,  0, 0x5140 );
-#ifdef Delay_PHYRst
-                phy_delay( Delay_PHYRst );
-#endif
-                /* Only 1G Test is PASS, 100M and 10M is 0 @20130619 */
-
-// Waiting for BCM FAE's response
-//              if ( eng->run.speed_sel[ 0 ] ) {
-//                      // Speed 1G
-//                      // Enable Internal Loopback mode
-//                      // Page 58, BCM54612EB1KMLG_Spec.pdf
-//                      phy_write( eng,  0, 0x5140 );
-//              }
-//              else if ( eng->run.speed_sel[ 1 ] ) {
-//                      // Speed 100M
-//                      // Enable Internal Loopback mode
-//                      // Page 58, BCM54612EB1KMLG_Spec.pdf
-//                      phy_write( eng,  0, 0x7100 );
-//                      phy_write( eng, 30, 0x1000 );
-//              }
-//              else if ( eng->run.speed_sel[ 2 ] ) {
-//                      // Speed 10M
-//                      // Enable Internal Loopback mode
-//                      // Page 58, BCM54612EB1KMLG_Spec.pdf
-//                      phy_write( eng,  0, 0x5100 );
-//                      phy_write( eng, 30, 0x1000 );
-//              }
-//
-#ifdef Delay_PHYRst
-//              phy_delay( Delay_PHYRst );
-#endif
-        }
-        else {
-
-                if ( eng->run.speed_sel[ 0 ] ) {
-                        // Page 60, BCM54612EB1KMLG_Spec.pdf
-                        // need to insert loopback plug
-                        phy_write( eng,  9, 0x1800 );
-                        phy_write( eng,  0, 0x0140 );
-                        phy_write( eng, 24, 0x8400 ); // Enable Transmit test mode
-                }
-                else if ( eng->run.speed_sel[ 1 ] ) {
-                        // Page 60, BCM54612EB1KMLG_Spec.pdf
-                        // need to insert loopback plug
-                        phy_write( eng,  0, 0x2100 );
-                        phy_write( eng, 24, 0x8400 ); // Enable Transmit test mode
-                }
-                else {
-                        // Page 60, BCM54612EB1KMLG_Spec.pdf
-                        // need to insert loopback plug
-                        phy_write( eng,  0, 0x0100 );
-                        phy_write( eng, 24, 0x8400 ); // Enable Transmit test mode
-                }
-#ifdef Delay_PHYRst
-                phy_delay( Delay_PHYRst );
-                phy_delay( Delay_PHYRst );
-#endif                
-        }
+        } else if (eng->phy.loopback) {
+		/* reg1E[12]: force-link */
+		phy_write(eng, 0x1e, BIT(12));
+	} else {
+		if (eng->run.speed_sel[0]) {
+			phy_write(eng, 0x9, 0x1800);
+			phy_write(eng, 0x0, 0x0140);
+			phy_write(eng, 0x18, 0x8400);
+		} else if (eng->run.speed_sel[1]) {
+			phy_write(eng, 0x0, 0x2100);
+			phy_write(eng, 0x18, 0x8400);
+		} else {
+			phy_write(eng, 0x0, 0x0100);
+			phy_write(eng, 0x18, 0x8400);
+		}
+	}
 }
 
 //------------------------------------------------------------
