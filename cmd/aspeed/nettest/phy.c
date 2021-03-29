@@ -566,6 +566,7 @@ void phy_marvell2 (MAC_ENGINE *eng) {//88E1512//88E15 10/12/14/18
         // switch page 2
         phy_write( eng, 22, 0x0002 );
         eng->phy.PHY_15h = phy_read( eng, 21 );
+#if 0
         if ( eng->phy.PHY_15h & 0x0030 ) {
                 printf("\n\n[Warning] Page2, Register 21, bit 4~5 must be 0 [Reg15h_2:%04x]\n\n", eng->phy.PHY_15h);
                 if ( eng->run.TM_IOTiming ) PRINTF( FP_IO, "\n\n[Warning] Page2, Register 21, bit 4~5 must be 0 [Reg15h_2:%04x]\n\n", eng->phy.PHY_15h );
@@ -573,6 +574,7 @@ void phy_marvell2 (MAC_ENGINE *eng) {//88E1512//88E15 10/12/14/18
 
                 phy_write( eng, 21, eng->phy.PHY_15h & 0xffcf );
         }
+#endif
         phy_write( eng, 22, 0x0000 );
 
 
@@ -759,7 +761,7 @@ void phy_broadcom0 (MAC_ENGINE *eng) {//BCM54612
         eng->phy.PHY_18h = phy_read( eng, 24 );
         phy_write( eng, 28, 0x0c00 );//read reg 1Ch, shadow value 00011
         eng->phy.PHY_1ch = phy_read( eng, 28 );
-
+#if 1
         if ( eng->phy.PHY_18h & 0x0100 ) {
                 PHY_new = ( eng->phy.PHY_18h & 0x0af0 ) | 0xf007;
                 printf("\n\n[Warning] Shadow value 111, Register 24, bit 8 must be 0 [Reg18h_7:%04x->%04x]\n\n", eng->phy.PHY_18h, PHY_new);
@@ -768,6 +770,7 @@ void phy_broadcom0 (MAC_ENGINE *eng) {//BCM54612
 
                 phy_write( eng, 24, PHY_new ); // Disable RGMII RXD to RXC Skew
         }
+#endif
         if ( eng->phy.PHY_1ch & 0x0200 ) {
                 PHY_new = ( eng->phy.PHY_1ch & 0x0000 ) | 0x8c00;
                 printf("\n\n[Warning] Shadow value 00011, Register 28, bit 9 must be 0 [Reg1ch_3:%04x->%04x]\n\n", eng->phy.PHY_1ch, PHY_new);
@@ -782,7 +785,7 @@ void phy_broadcom0 (MAC_ENGINE *eng) {//BCM54612
         } else if (eng->phy.loopback) {
 		phy_basic_setting(eng);
 		/* reg1E[12]: force-link */
-		if (strncmp(eng->phy.phy_name, "BCM5421x", strlen("BCM5421x") == 0)
+		if (strncmp((char *)eng->phy.phy_name, "BCM5421x", strlen("BCM5421x")) == 0)
 			phy_write(eng, 0x1e, BIT(12));
 	} else {
 		if (eng->run.speed_sel[0]) {
