@@ -15,9 +15,7 @@
 
 #ifdef PHY_DEBUG
 #undef DbgPrn_PHYRW
-#undef DbgPrn_PHYName
 #define DbgPrn_PHYRW		1
-#define DbgPrn_PHYName		1
 #endif
 
 #ifdef PHY_DEBUG_SET_CLR
@@ -373,10 +371,6 @@ void recov_phy_marvell (MAC_ENGINE *eng) {//88E1111
 //------------------------------------------------------------
 void phy_marvell (MAC_ENGINE *eng) 
 {//88E1111
-
-        if ( DbgPrn_PHYName )
-                printf("--->(%04x %04x)[Marvell] %s\n", eng->phy.id1, eng->phy.id2, eng->phy.phy_name);
-
         if ( eng->run.tm_tx_only ) {
                 phy_reset( eng );
         }
@@ -429,9 +423,6 @@ void recov_phy_marvell0 (MAC_ENGINE *eng) {//88E1310
 //------------------------------------------------------------
 void phy_marvell0 (MAC_ENGINE *eng) {//88E1310
 //      int        Retry;
-
-        if ( DbgPrn_PHYName )
-                printf("--->(%04x %04x)[Marvell] %s\n", eng->phy.id1, eng->phy.id2, eng->phy.phy_name);
 
         phy_write( eng, 22, 0x0002 );
 
@@ -507,9 +498,6 @@ void phy_marvell1 (MAC_ENGINE *eng) {//88E6176
 //      uint32_t      PHY_01h;
         int8_t       phy_addr_org;
 
-        if ( DbgPrn_PHYName )
-                printf("--->(%04x %04x)[Marvell] %s\n", eng->phy.id1, eng->phy.id2, eng->phy.phy_name);
-
         if ( eng->run.tm_tx_only ) {
                 printf("This mode doesn't support in 88E6176.\n");
         } else {
@@ -559,9 +547,6 @@ void recov_phy_marvell2 (MAC_ENGINE *eng) {//88E1512//88E15 10/12/14/18
 void phy_marvell2 (MAC_ENGINE *eng) {//88E1512//88E15 10/12/14/18
 //      int        Retry = 0;
 //      uint32_t      temp_reg;
-
-        if ( DbgPrn_PHYName )
-                printf("--->(%04x %04x)[Marvell] %s\n", eng->phy.id1, eng->phy.id2, eng->phy.phy_name);
 
         // switch page 2
         phy_write( eng, 22, 0x0002 );
@@ -651,11 +636,6 @@ void phy_marvell2 (MAC_ENGINE *eng) {//88E1512//88E15 10/12/14/18
 void phy_marvell3 (MAC_ENGINE *eng) 
 {//88E3019
 
-        if ( DbgPrn_PHYName ) {
-                printf("--->(%04x %04x)[Marvell] %s\n", eng->phy.id1, eng->phy.id2, eng->phy.phy_name);
-                if ( !eng->run.tm_tx_only ) PRINTF( FP_LOG, "--->(%04x %04x)[Marvell] %s\n", eng->phy.id1, eng->phy.id2, eng->phy.phy_name);
-        }
-
         //Reg1ch[11:10]: MAC Interface Mode
         // 00 => RGMII where receive clock trnasitions when data transitions
         // 01 => RGMII where receive clock trnasitions when data is stable
@@ -690,11 +670,9 @@ void phy_marvell3 (MAC_ENGINE *eng)
 }
 
 //------------------------------------------------------------
-void phy_broadcom (MAC_ENGINE *eng) {//BCM5221
-    uint32_t      reg;
-
-        if ( DbgPrn_PHYName )
-                printf("--->(%04x %04x)[Broadcom] %s\n", eng->phy.id1, eng->phy.id2, eng->phy.phy_name);
+void phy_broadcom (MAC_ENGINE *eng) 
+{//BCM5221
+	uint32_t      reg;
 
         phy_reset( eng );
 
@@ -744,11 +722,9 @@ void recov_phy_broadcom0 (MAC_ENGINE *eng) {//BCM54612
 //internal loop 1G  : no  loopback stub
 //internal loop 100M: Don't support(?)
 //internal loop 10M : Don't support(?)
-void phy_broadcom0 (MAC_ENGINE *eng) {//BCM54612
-        uint32_t      PHY_new;
-
-        if ( DbgPrn_PHYName )
-                printf("--->(%04x %04x)[Broadcom] %s\n", eng->phy.id1, eng->phy.id2, eng->phy.phy_name);
+void phy_broadcom0 (MAC_ENGINE *eng)
+{
+	uint32_t PHY_new;
 
 	phy_reset(eng);
 
@@ -761,7 +737,7 @@ void phy_broadcom0 (MAC_ENGINE *eng) {//BCM54612
         eng->phy.PHY_18h = phy_read( eng, 24 );
         phy_write( eng, 28, 0x0c00 );//read reg 1Ch, shadow value 00011
         eng->phy.PHY_1ch = phy_read( eng, 28 );
-#if 1
+
         if ( eng->phy.PHY_18h & 0x0100 ) {
                 PHY_new = ( eng->phy.PHY_18h & 0x0af0 ) | 0xf007;
                 printf("\n\n[Warning] Shadow value 111, Register 24, bit 8 must be 0 [Reg18h_7:%04x->%04x]\n\n", eng->phy.PHY_18h, PHY_new);
@@ -770,7 +746,7 @@ void phy_broadcom0 (MAC_ENGINE *eng) {//BCM54612
 
                 phy_write( eng, 24, PHY_new ); // Disable RGMII RXD to RXC Skew
         }
-#endif
+
         if ( eng->phy.PHY_1ch & 0x0200 ) {
                 PHY_new = ( eng->phy.PHY_1ch & 0x0000 ) | 0x8c00;
                 printf("\n\n[Warning] Shadow value 00011, Register 28, bit 9 must be 0 [Reg1ch_3:%04x->%04x]\n\n", eng->phy.PHY_1ch, PHY_new);
@@ -803,9 +779,8 @@ void phy_broadcom0 (MAC_ENGINE *eng) {//BCM54612
 }
 
 //------------------------------------------------------------
-void phy_realtek (MAC_ENGINE *eng) {//RTL8201N
-        if ( DbgPrn_PHYName )
-                printf("--->(%04x %04x)[Realtek] %s\n", eng->phy.id1, eng->phy.id2, eng->phy.phy_name);
+void phy_realtek (MAC_ENGINE *eng)
+{//RTL8201N
 
         phy_reset( eng );
 }
@@ -813,9 +788,8 @@ void phy_realtek (MAC_ENGINE *eng) {//RTL8201N
 //------------------------------------------------------------
 //internal loop 100M: Don't support
 //internal loop 10M : no  loopback stub
-void phy_realtek0 (MAC_ENGINE *eng) {//RTL8201E
-        if ( DbgPrn_PHYName )
-                printf("--->(%04x %04x)[Realtek] %s\n", eng->phy.id1, eng->phy.id2, eng->phy.phy_name);
+void phy_realtek0 (MAC_ENGINE *eng)
+{//RTL8201E
 
         eng->phy.RMIICK_IOMode |= PHY_Flag_RMIICK_IOMode_RTL8201E;
 
@@ -936,9 +910,8 @@ void recov_phy_realtek1 (MAC_ENGINE *eng) {//RTL8211D
 //internal loop 1G  : no  loopback stub
 //internal loop 100M: no  loopback stub
 //internal loop 10M : no  loopback stub
-void phy_realtek1 (MAC_ENGINE *eng) {//RTL8211D
-        if ( DbgPrn_PHYName )
-                printf("--->(%04x %04x)[Realtek] %s\n", eng->phy.id1, eng->phy.id2, eng->phy.phy_name);
+void phy_realtek1 (MAC_ENGINE *eng)
+{//RTL8211D
 
         if ( eng->run.tm_tx_only ) {
                 if ( eng->run.TM_IEEE ) {
@@ -1154,10 +1127,7 @@ void phy_realtek2 (MAC_ENGINE *eng)
 
 	RTK_DBG_PRINTF("\nSet RTL8211E [Start] =====>\n");
 
-	rtk_dbg_gpio_init();	
-
-        if ( DbgPrn_PHYName )
-                printf("--->(%04x %04x)[Realtek] %s\n", eng->phy.id1, eng->phy.id2, eng->phy.phy_name);
+	rtk_dbg_gpio_init();
 
 #ifdef RTK_DEBUG
 #else
@@ -1376,9 +1346,8 @@ void recov_phy_realtek3 (MAC_ENGINE *eng) {//RTL8211C
 }
 
 //------------------------------------------------------------
-void phy_realtek3 (MAC_ENGINE *eng) {//RTL8211C
-        if ( DbgPrn_PHYName )
-                printf("--->(%04x %04x)[Realtek] %s\n", eng->phy.id1, eng->phy.id2, eng->phy.phy_name);
+void phy_realtek3 (MAC_ENGINE *eng)
+{//RTL8211C
 
         if ( eng->run.tm_tx_only ) {
                 if ( eng->run.TM_IEEE ) {
@@ -1479,8 +1448,6 @@ void phy_realtek3 (MAC_ENGINE *eng) {//RTL8211C
 //internal loop 100M: no  loopback stub
 //internal loop 10M : no  loopback stub
 void phy_realtek4 (MAC_ENGINE *eng) {//RTL8201F
-        if ( DbgPrn_PHYName )
-                printf("--->(%04x %04x)[Realtek] %s\n", eng->phy.id1, eng->phy.id2, eng->phy.phy_name);
 
         eng->phy.RMIICK_IOMode |= PHY_Flag_RMIICK_IOMode_RTL8201F;
 
@@ -1662,9 +1629,6 @@ void phy_realtek5 (MAC_ENGINE *eng) {//RTL8211F
 	uint16_t check_value;
 
 	RTK_DBG_PRINTF("\nSet RTL8211F [Start] =====>\n");
-	if (DbgPrn_PHYName)
-		printf("--->(%04x %04x)[Realtek] %s\n", eng->phy.id1,
-		       eng->phy.id2, eng->phy.phy_name);
 
 	if (eng->run.tm_tx_only) {
 		if (eng->run.TM_IEEE) {
@@ -1792,9 +1756,6 @@ void phy_realtek5 (MAC_ENGINE *eng) {//RTL8211F
 //It is a LAN Switch, only support 1G internal loopback test.
 void phy_realtek6 (MAC_ENGINE *eng) 
 {//RTL8363S
-	if (DbgPrn_PHYName)
-		printf("--->(%04x %04x)[Realtek] %s\n", eng->phy.id1,
-		       eng->phy.id2, eng->phy.phy_name);
 
 	if (eng->run.tm_tx_only) {
 		printf("This mode doesn't support in RTL8363S.\n");
@@ -1818,18 +1779,12 @@ void phy_realtek6 (MAC_ENGINE *eng)
 //------------------------------------------------------------
 void phy_smsc (MAC_ENGINE *eng) 
 {//LAN8700
-	if (DbgPrn_PHYName)
-		printf("--->(%04x %04x)[SMSC] %s\n", eng->phy.id1,
-		       eng->phy.id2, eng->phy.phy_name);
-
 	phy_reset(eng);
 }
 
 //------------------------------------------------------------
 void phy_micrel (MAC_ENGINE *eng) 
 {//KSZ8041
-        if ( DbgPrn_PHYName )
-                printf("--->(%04x %04x)[Micrel] %s\n", eng->phy.id1, eng->phy.id2, eng->phy.phy_name);
 
         phy_reset( eng );
 
@@ -1837,9 +1792,8 @@ void phy_micrel (MAC_ENGINE *eng)
 }
 
 //------------------------------------------------------------
-void phy_micrel0 (MAC_ENGINE *eng) {//KSZ8031/KSZ8051
-        if ( DbgPrn_PHYName )
-                printf("--->(%04x %04x)[Micrel] %s\n", eng->phy.id1, eng->phy.id2, eng->phy.phy_name);
+void phy_micrel0 (MAC_ENGINE *eng)
+{//KSZ8031/KSZ8051
 
         //For KSZ8051RNL only
         //Reg1Fh[7] = 0(default): 25MHz Mode, XI, XO(pin 9, 8) is 25MHz(crystal/oscilator).
@@ -1880,9 +1834,6 @@ void phy_micrel0 (MAC_ENGINE *eng) {//KSZ8031/KSZ8051
 void phy_micrel1 (MAC_ENGINE *eng) 
 {//KSZ9031
 //      int        temp;
-
-        if ( DbgPrn_PHYName )
-                printf("--->(%04x %04x)[Micrel] %s\n", eng->phy.id1, eng->phy.id2, eng->phy.phy_name);
 
 /*
         phy_write( eng, 13, 0x0002 );
@@ -1945,8 +1896,6 @@ printf("Reg2.8 = %04x -> %04x\n", temp, phy_read( eng, 14 ));
 //internal loop 10M : no  loopback stub
 void phy_micrel2 (MAC_ENGINE *eng) 
 {//KSZ8081
-        if ( DbgPrn_PHYName )
-                printf("--->(%04x %04x)[Micrel] %s\n", eng->phy.id1, eng->phy.id2, eng->phy.phy_name);
 
         if ( eng->run.tm_tx_only ) {
                 if ( eng->run.TM_IEEE ) {
@@ -1986,9 +1935,8 @@ void recov_phy_vitesse (MAC_ENGINE *eng) {//VSC8601
 }
 
 //------------------------------------------------------------
-void phy_vitesse (MAC_ENGINE *eng) {//VSC8601
-        if ( DbgPrn_PHYName )
-                printf("--->(%04x %04x)[VITESSE] %s\n", eng->phy.id1, eng->phy.id2, eng->phy.phy_name);
+void phy_vitesse (MAC_ENGINE *eng)
+{//VSC8601
 
         if ( eng->run.tm_tx_only ) {
                 if ( eng->run.TM_IEEE ) {
@@ -2037,19 +1985,6 @@ void recov_phy_atheros (MAC_ENGINE *eng) {//AR8035
 //------------------------------------------------------------
 void phy_atheros (MAC_ENGINE *eng) 
 {
-#ifdef PHY_DEBUG
-	if (1) {
-#else
-	if (DbgPrn_PHYName) {
-#endif
-		printf("--->(%04x %04x)[ATHEROS] %s\n", eng->phy.id1,
-		       eng->phy.id2, eng->phy.phy_name);
-		if (!eng->run.tm_tx_only)
-			PRINTF(FP_LOG, "--->(%04x %04x)[ATHEROS] %s\n",
-			       eng->phy.id1, eng->phy.id2,
-			       eng->phy.phy_name);
-	}
-
 	// Reg0b[15]: Power saving
 	phy_write(eng, 29, 0x000b);
 	eng->phy.PHY_1eh = phy_read(eng, 30);
@@ -2168,10 +2103,6 @@ void phy_atheros (MAC_ENGINE *eng)
 void phy_default (MAC_ENGINE *eng) 
 {
 	nt_log_func_name();
-
-	if (DbgPrn_PHYName)
-		printf("--->(%04x %04x)%s\n", eng->phy.id1,
-		       eng->phy.id2, eng->phy.phy_name);
 
 	phy_reset(eng);
 }
