@@ -260,8 +260,9 @@ void phy_delay (int dt)
 //------------------------------------------------------------
 void phy_basic_setting(MAC_ENGINE *eng)
 {
-	phy_clrset(eng, 0, 0x7140, eng->phy.PHY_00h);
-
+	uint32_t clr = GENMASK(14, 10) | BIT(6);
+	
+	phy_clrset(eng, 0, clr, eng->phy.PHY_00h);
 	if (DbgPrn_PHYRW) {
 		printf("[Set]00: 0x%04x (%02d:%08x)\n",
 		       phy_read(eng, PHY_REG_BMCR), eng->phy.Adr,
@@ -777,10 +778,12 @@ void phy_broadcom0 (MAC_ENGINE *eng) {//BCM54612
         }
 
         if ( eng->run.tm_tx_only ) {
-                phy_basic_setting( eng );
+                phy_basic_setting(eng);
         } else if (eng->phy.loopback) {
+		phy_basic_setting(eng);
 		/* reg1E[12]: force-link */
-		phy_write(eng, 0x1e, BIT(12));
+		if (strncmp(eng->phy.phy_name, "BCM5421x", strlen("BCM5421x") == 0)
+			phy_write(eng, 0x1e, BIT(12));
 	} else {
 		if (eng->run.speed_sel[0]) {
 			phy_write(eng, 0x9, 0x1800);
@@ -2243,37 +2246,16 @@ uint32_t phy_find_addr(MAC_ENGINE *eng)
 void phy_set00h (MAC_ENGINE *eng) 
 {
 	nt_log_func_name();
-	if (eng->run.tm_tx_only) {
-		if (eng->run.TM_IEEE) {
-			if (eng->run.speed_sel[0])
-				eng->phy.PHY_00h = 0x0140;
-			else if (eng->run.speed_sel[1])
-				eng->phy.PHY_00h = 0x2100;
-			else
-				eng->phy.PHY_00h = 0x0100;
-		} else {
-			if (eng->run.speed_sel[0])
-				eng->phy.PHY_00h = 0x0140;
-			else if (eng->run.speed_sel[1])
-				eng->phy.PHY_00h = 0x2100;
-			else
-				eng->phy.PHY_00h = 0x0100;
-		}
-	} else if (eng->phy.loopback) {
-		if (eng->run.speed_sel[0])
-			eng->phy.PHY_00h = 0x4140;
-		else if (eng->run.speed_sel[1])
-			eng->phy.PHY_00h = 0x6100;
-		else
-			eng->phy.PHY_00h = 0x4100;
-	} else {
-		if (eng->run.speed_sel[0])
-			eng->phy.PHY_00h = 0x0140;
-		else if (eng->run.speed_sel[1])
-			eng->phy.PHY_00h = 0x2100;
-		else
-			eng->phy.PHY_00h = 0x0100;
-	}
+
+	eng->phy.PHY_00h = BIT(8);
+
+	if (eng->run.speed_sel[0])
+		eng->phy.PHY_00h |= BIT(6);
+	else if (eng->run.speed_sel[1])
+		eng->phy.PHY_00h |= BIT(13);
+
+	if (eng->phy.loopback)
+		eng->phy.PHY_00h |= BIT(14);
 }
 
 static uint32_t phy_check_id(MAC_ENGINE *p_eng, const struct phy_desc *p_phy) 
