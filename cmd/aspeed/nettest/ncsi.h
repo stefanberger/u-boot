@@ -35,6 +35,7 @@
 //#define NCSI_EnableDelay_DeSelectPackage
 //#define NCSI_EnableDelay_GetLinkStatus
 //#define NCSI_EnableDelay_EachPackage
+//#define NCSI_VERBOSE_TEST
 //#define Print_Version_ID
 //#define Print_PackageName
 #define Print_DetailFrame
