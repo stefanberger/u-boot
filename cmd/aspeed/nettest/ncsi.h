@@ -30,7 +30,7 @@
 
 #define NCSI_Skip_RxCRCData
 //#define NCSI_Skip_Phase1_DeSelectPackage
-//#define NCSI_Skip_DeSelectPackage
+#define NCSI_Skip_DeSelectPackage
 //#define NCSI_Skip_DiSChannel
 //#define NCSI_EnableDelay_DeSelectPackage
 //#define NCSI_EnableDelay_GetLinkStatus
