@@ -757,9 +757,8 @@ static void ast2600_sdrammc_common_init(struct ast2600_sdrammc_regs *regs)
 
         writel(MCR34_MREQI_DIS | MCR34_RESETN_DIS, &regs->power_ctrl);
         writel(SDRAM_VIDEO_UNLOCK_KEY, &regs->gm_protection_key);
-        writel(0x10 << MCR38_RW_MAX_GRANT_CNT_RQ_SHIFT,
-               &regs->arbitration_ctrl);
-        writel(0xFFBBFFF4, &regs->req_limit_mask);
+	writel(0x101010, &regs->arbitration_ctrl);
+	writel(0x0FFFFCFC, &regs->req_limit_mask);
 
 	for (i = 0; i < ARRAY_SIZE(ddr_max_grant_params); ++i)
                 writel(ddr_max_grant_params[i], &regs->max_grant_len[i]);
@@ -775,7 +774,7 @@ static void ast2600_sdrammc_common_init(struct ast2600_sdrammc_regs *regs)
         writel(0, &regs->test_init_val);
 
         writel(0xFFFFFFFF, &regs->req_input_ctrl);
-        writel(0, &regs->req_high_pri_ctrl);
+	writel(0x300, &regs->req_high_pri_ctrl);
 
         udelay(600);
 
