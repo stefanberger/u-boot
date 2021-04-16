@@ -1651,6 +1651,9 @@ void phy_realtek5 (MAC_ENGINE *eng) {//RTL8211F
 		reg &= ~BIT(3);
 	phy_write(eng, 0x15, reg);
 
+	/* restore page 0 */
+	phy_write(eng, 0x1f, 0x0);
+
 	if (eng->run.tm_tx_only) {
 		if (eng->run.TM_IEEE) {
 			if (eng->run.speed_sel[0]) {
