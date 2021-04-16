@@ -544,24 +544,22 @@ void recov_phy_marvell2 (MAC_ENGINE *eng) {//88E1512//88E15 10/12/14/18
 }
 
 //------------------------------------------------------------
-void phy_marvell2 (MAC_ENGINE *eng) {//88E1512//88E15 10/12/14/18
-//      int        Retry = 0;
-//      uint32_t      temp_reg;
+//88E1512//88E15 10/12/14/18
+void phy_marvell2 (MAC_ENGINE *eng) 
+{
+	/* switch to page 2 */
+	phy_write(eng, 22, 0x0002);
+	eng->phy.PHY_15h = phy_read(eng, 21);
+	eng->phy.PHY_15h &= ~GENMASK(5, 4);
+	if (eng->arg.ctrl.b.phy_tx_delay_en)
+		eng->phy.PHY_15h |= BIT(4);
+	if (eng->arg.ctrl.b.phy_rx_delay_en)
+		eng->phy.PHY_15h |= BIT(5);
 
-        // switch page 2
-        phy_write( eng, 22, 0x0002 );
-        eng->phy.PHY_15h = phy_read( eng, 21 );
-#if 0
-        if ( eng->phy.PHY_15h & 0x0030 ) {
-                printf("\n\n[Warning] Page2, Register 21, bit 4~5 must be 0 [Reg15h_2:%04x]\n\n", eng->phy.PHY_15h);
-                if ( eng->run.TM_IOTiming ) PRINTF( FP_IO, "\n\n[Warning] Page2, Register 21, bit 4~5 must be 0 [Reg15h_2:%04x]\n\n", eng->phy.PHY_15h );
-                if ( !eng->run.tm_tx_only ) PRINTF( FP_LOG, "\n\n[Warning] Page2, Register 21, bit 4~5 must be 0 [Reg15h_2:%04x]\n\n", eng->phy.PHY_15h );
+	phy_write(eng, 21, eng->phy.PHY_15h);
 
-                phy_write( eng, 21, eng->phy.PHY_15h & 0xffcf );
-        }
-#endif
-        phy_write( eng, 22, 0x0000 );
-
+	/* switch to page 0 */
+	phy_write(eng, 22, 0x0000);
 
         if ( eng->run.tm_tx_only ) {
                 phy_reset( eng );
@@ -733,28 +731,30 @@ void phy_broadcom0 (MAC_ENGINE *eng)
 
 	phy_write( eng, 0, eng->phy.PHY_00h & ~BIT(10));
 
-        phy_write( eng, 24, 0x7007 );//read reg 18h, shadow value 111
-        eng->phy.PHY_18h = phy_read( eng, 24 );
-        phy_write( eng, 28, 0x0c00 );//read reg 1Ch, shadow value 00011
-        eng->phy.PHY_1ch = phy_read( eng, 28 );
+	/*
+	 * RX interface delay: reg 0x18, shadow value b'0111: misc control
+	 * bit[8] RGMII RXD to RXC skew
+	 */
+	phy_write(eng, 0x18, (0x7 << 12) | 0x7);
+	eng->phy.PHY_18h = phy_read(eng, 0x18);
+	PHY_new = eng->phy.PHY_18h & ~((0x7 << 12) | 0x7 | BIT(8));
+	PHY_new |= (0x7 << 12) | 0x7 | BIT(15);
+	if (eng->arg.ctrl.b.phy_rx_delay_en)
+		PHY_new |= BIT(8);
+	phy_write(eng, 0x18, PHY_new);
 
-        if ( eng->phy.PHY_18h & 0x0100 ) {
-                PHY_new = ( eng->phy.PHY_18h & 0x0af0 ) | 0xf007;
-                printf("\n\n[Warning] Shadow value 111, Register 24, bit 8 must be 0 [Reg18h_7:%04x->%04x]\n\n", eng->phy.PHY_18h, PHY_new);
-                if ( eng->run.TM_IOTiming ) PRINTF( FP_IO, "\n\n[Warning] Shadow value 111, Register 24, bit 8 must be 0 [Reg18h_7:%04x->%04x]\n\n", eng->phy.PHY_18h, PHY_new );
-                if ( !eng->run.tm_tx_only ) PRINTF( FP_LOG, "\n\n[Warning] Shadow value 111, Register 24, bit 8 must be 0 [Reg18h_7:%04x->%04x]\n\n", eng->phy.PHY_18h, PHY_new );
-
-                phy_write( eng, 24, PHY_new ); // Disable RGMII RXD to RXC Skew
-        }
-
-        if ( eng->phy.PHY_1ch & 0x0200 ) {
-                PHY_new = ( eng->phy.PHY_1ch & 0x0000 ) | 0x8c00;
-                printf("\n\n[Warning] Shadow value 00011, Register 28, bit 9 must be 0 [Reg1ch_3:%04x->%04x]\n\n", eng->phy.PHY_1ch, PHY_new);
-                if ( eng->run.TM_IOTiming ) PRINTF( FP_IO, "\n\n[Warning] Shadow value 00011, Register 28, bit 9 must be 0 [Reg1ch_3:%04x->%04x]\n\n", eng->phy.PHY_1ch, PHY_new );
-                if ( !eng->run.tm_tx_only ) PRINTF( FP_LOG, "\n\n[Warning] Shadow value 00011, Register 28, bit 9 must be 0 [Reg1ch_3:%04x->%04x]\n\n", eng->phy.PHY_1ch, PHY_new );
-
-                phy_write( eng, 28, PHY_new );// Disable GTXCLK Clock Delay Enable
-        }
+	/*
+	 * TX interface delay: reg 0x1c, shadow value b'0011: clock alignment 
+	 * control
+	 * bit[9] GTXCLK clock delay enable
+	 */
+	phy_write(eng, 0x1c, 0x3 << 10);
+	eng->phy.PHY_1ch = phy_read(eng, 0x1c);
+	PHY_new = eng->phy.PHY_1ch & ~((0x1f << 10) | BIT(9));
+	PHY_new |= (0x3 << 10) | BIT(15);
+	if (eng->arg.ctrl.b.phy_tx_delay_en)
+		PHY_new |= BIT(9);
+	phy_write(eng, 0x1c, PHY_new);
 
         if ( eng->run.tm_tx_only ) {
                 phy_basic_setting(eng);
@@ -1628,8 +1628,28 @@ void recov_phy_realtek5 (MAC_ENGINE *eng)
 //------------------------------------------------------------
 void phy_realtek5 (MAC_ENGINE *eng) {//RTL8211F
 	uint16_t check_value;
+	uint16_t reg;
 
 	RTK_DBG_PRINTF("\nSet RTL8211F [Start] =====>\n");
+
+	/* select page 0xd08 to configure TX and RX delay */
+	phy_write(eng, 0x1f, 0xd08);
+
+	/* page 0xd08, reg 0x11[8] TX delay enable */
+	reg = phy_read(eng, 0x11);
+	if (eng->arg.ctrl.b.phy_tx_delay_en)
+		reg |= BIT(8);
+	else
+		reg &= ~BIT(8);
+	phy_write(eng, 0x11, reg);
+
+	/* page 0xd08, reg 0x15[3] RX delay enable */
+	reg = phy_read(eng, 0x15);
+	if (eng->arg.ctrl.b.phy_rx_delay_en)
+		reg |= BIT(3);
+	else
+		reg &= ~BIT(3);
+	phy_write(eng, 0x15, reg);
 
 	if (eng->run.tm_tx_only) {
 		if (eng->run.TM_IEEE) {
