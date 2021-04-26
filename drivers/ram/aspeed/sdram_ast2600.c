@@ -141,17 +141,17 @@ DECLARE_GLOBAL_DATA_PTR;
  * These are hardcoded settings taken from Aspeed SDK.
  */
 #if defined(CONFIG_FPGA_ASPEED) || defined(CONFIG_ASPEED_PALLADIUM)
-static const u32 ddr4_ac_timing[4] = {0x030C0207, 0x04451133, 0x0E010200,
-                                      0x00000140};
+static const u32 ddr4_ac_timing[4] = { 0x030C0207, 0x04451133, 0x0E010200,
+				       0x00000140 };
 
-static const u32 ddr_max_grant_params[4] = {0x88888888, 0x88888888, 0x88888888,
-                                            0x88888888};
+static const u32 ddr_max_grant_params[4] = { 0x88888888, 0x88888888, 0x88888888,
+					     0x88888888 };
 #else
-static const u32 ddr4_ac_timing[4] = {0x040e0307, 0x0f4711f1, 0x0e060304,
-                                      0x00001240};
+static const u32 ddr4_ac_timing[4] = { 0x040e0307, 0x0f4711f1, 0x0e060304,
+				       0x00001240 };
 
-static const u32 ddr_max_grant_params[4] = {0x44444444, 0x44444466, 0x44444444,
-                                            0x44444444};
+static const u32 ddr_max_grant_params[4] = { 0x44444444, 0x44444466, 0x44444444,
+					     0x44444444 };
 #endif
 
 struct dram_info {
@@ -345,8 +345,9 @@ static int ast2600_sdramphy_check_status(struct dram_info *info)
 #ifndef CONFIG_ASPEED_BYPASS_SELFTEST
 #define MC_TEST_PATTERN_N 8
 static u32 as2600_sdrammc_test_pattern[MC_TEST_PATTERN_N] = {
-    0xcc33cc33, 0xff00ff00, 0xaa55aa55, 0x88778877,
-    0x92cc4d6e, 0x543d3cde, 0xf1e843c7, 0x7c61d253};
+	0xcc33cc33, 0xff00ff00, 0xaa55aa55, 0x88778877,
+	0x92cc4d6e, 0x543d3cde, 0xf1e843c7, 0x7c61d253
+};
 
 #define TIMEOUT_DRAM	5000000
 int ast2600_sdrammc_dg_test(struct dram_info *info, unsigned int datagen, u32 mode)
@@ -356,11 +357,10 @@ int ast2600_sdrammc_dg_test(struct dram_info *info, unsigned int datagen, u32 mo
 	struct ast2600_sdrammc_regs *regs = info->regs;
 
 	writel(0, &regs->ecc_test_ctrl);
-	if (mode == 0) {
+	if (mode == 0)
 		writel(0x00000085 | (datagen << 3), &regs->ecc_test_ctrl);
-	} else {
+	else
 		writel(0x000000C1 | (datagen << 3), &regs->ecc_test_ctrl);
-	}
 
 	do {
 		data = readl(&regs->ecc_test_ctrl) & GENMASK(13, 12);
@@ -389,13 +389,15 @@ int ast2600_sdrammc_cbr_test(struct dram_info *info)
 	clrsetbits_le32(&regs->test_addr, GENMASK(30, 4), 0x7ffff0);
 
 	/* single */
-	for (i=0; i<8; i++) {
-  		if(!ast2600_sdrammc_dg_test(info, i, 0))   return(0);
+	for (i = 0; i < 8; i++) {
+		if (!ast2600_sdrammc_dg_test(info, i, 0))
+			return (0);
 	}
 
 	/* burst */
-	for (i=0; i<8; i++) {
-  		if(!ast2600_sdrammc_dg_test(info, i, i))   return(0);
+	for (i = 0; i < 8; i++) {
+		if (!ast2600_sdrammc_dg_test(info, i, i))
+			return (0);
 	}
 
 	return(1);
@@ -500,119 +502,118 @@ static int ast2600_sdrammc_search_read_window(struct dram_info *info)
 	writel(0xc, phy_setting + 0x0000);
 	return 1;
 #endif
-        writel(SEARCH_RDWIN_PTRN_0, SEARCH_RDWIN_ANCHOR_0);
-        writel(SEARCH_RDWIN_PTRN_1, SEARCH_RDWIN_ANCHOR_1);
+	writel(SEARCH_RDWIN_PTRN_0, SEARCH_RDWIN_ANCHOR_0);
+	writel(SEARCH_RDWIN_PTRN_1, SEARCH_RDWIN_ANCHOR_1);
 
-        while (gwin == 0) {
-                while (!(win & 0x80)) {
-                        debug("Window = 0x%X\n", win);
-                        writel(win, phy_setting + 0x0000);
+	while (gwin == 0) {
+		while (!(win & 0x80)) {
+			debug("Window = 0x%X\n", win);
+			writel(win, phy_setting + 0x0000);
 
-                        dat1 = readl(SEARCH_RDWIN_ANCHOR_0);
-                        dat1 += readl(SEARCH_RDWIN_ANCHOR_1);
-                        while (dat1 == SEARCH_RDWIN_PTRN_SUM) {
-                                ast2600_sdrammc_fpga_set_pll(info);
-                                dat1 = readl(SEARCH_RDWIN_ANCHOR_0);
-                                dat1 += readl(SEARCH_RDWIN_ANCHOR_1);
-                        }
+			dat1 = readl(SEARCH_RDWIN_ANCHOR_0);
+			dat1 += readl(SEARCH_RDWIN_ANCHOR_1);
+			while (dat1 == SEARCH_RDWIN_PTRN_SUM) {
+				ast2600_sdrammc_fpga_set_pll(info);
+				dat1 = readl(SEARCH_RDWIN_ANCHOR_0);
+				dat1 += readl(SEARCH_RDWIN_ANCHOR_1);
+			}
 
-                        pll_min = 0xfff;
-                        pll_max = 0x0;
-                        pll = 0;
-                        while (pll_max > 0 || pll < 256) {
-                                ast2600_sdrammc_fpga_set_pll(info);
-                                dat1 = readl(SEARCH_RDWIN_ANCHOR_0);
-                                dat1 += readl(SEARCH_RDWIN_ANCHOR_1);
-                                if (dat1 == SEARCH_RDWIN_PTRN_SUM) {
-                                        if (pll_min > pll) {
-                                                pll_min = pll;
-                                        }
-                                        if (pll_max < pll) {
-                                                pll_max = pll;
-                                        }
-                                        debug("%3d_(%3d:%3d)\n", pll, pll_min,
-                                               pll_max);
-                                } else if (pll_max > 0) {
-                                        pll_min = pll_max - pll_min;
-                                        if (gwinsize < pll_min) {
-                                                gwin = win;
-                                                gwinsize = pll_min;
-                                        }
-                                        break;
-                                }
-                                pll += 1;
-                        }
+			pll_min = 0xfff;
+			pll_max = 0x0;
+			pll = 0;
+			while (pll_max > 0 || pll < 256) {
+				ast2600_sdrammc_fpga_set_pll(info);
+				dat1 = readl(SEARCH_RDWIN_ANCHOR_0);
+				dat1 += readl(SEARCH_RDWIN_ANCHOR_1);
+				if (dat1 == SEARCH_RDWIN_PTRN_SUM) {
+					if (pll_min > pll)
+						pll_min = pll;
 
-                        if (gwin != 0 && pll_max == 0) {
-                                break;
-                        }
-                        win = win << 1;
-                }
-                if (gwin == 0) {
-                        win = 0x7;
-                }
-        }
-        debug("Set PLL Read Gating Window = %x\n", gwin);
-        writel(gwin, phy_setting + 0x0000);
+					if (pll_max < pll)
+						pll_max = pll;
 
-        debug("PLL Read Window training\n");
-        pll_min = 0xfff;
-        pll_max = 0x0;
+					debug("%3d_(%3d:%3d)\n", pll, pll_min,
+					       pll_max);
+				} else if (pll_max > 0) {
+					pll_min = pll_max - pll_min;
+					if (gwinsize < pll_min) {
+						gwin = win;
+						gwinsize = pll_min;
+					}
+					break;
+				}
+				pll += 1;
+			}
 
-        debug("Search Window Start\n");
-        dat1 = readl(SEARCH_RDWIN_ANCHOR_0);
-        dat1 += readl(SEARCH_RDWIN_ANCHOR_1);
-        while (dat1 == SEARCH_RDWIN_PTRN_SUM) {
-                ast2600_sdrammc_fpga_set_pll(info);
-                dat1 = readl(SEARCH_RDWIN_ANCHOR_0);
-                dat1 += readl(SEARCH_RDWIN_ANCHOR_1);
-        }
+			if (gwin != 0 && pll_max == 0)
+				break;
 
-        debug("Search Window Margin\n");
-        pll = 0;
-        while (pll_max > 0 || pll < 256) {
-                ast2600_sdrammc_fpga_set_pll(info);
-                dat1 = readl(SEARCH_RDWIN_ANCHOR_0);
-                dat1 += readl(SEARCH_RDWIN_ANCHOR_1);
-                if (dat1 == SEARCH_RDWIN_PTRN_SUM) {
-                        if (pll_min > pll) {
-                                pll_min = pll;
-                        }
-                        if (pll_max < pll) {
-                                pll_max = pll;
-                        }
-                        debug("%3d_(%3d:%3d)\n", pll, pll_min, pll_max);
-                } else if (pll_max > 0 && (pll_max - pll_min) > 20) {
-                        break;
-                } else if (pll_max > 0) {
-                        pll_min = 0xfff;
-                        pll_max = 0x0;
-                }
-                pll += 1;
-        }
-        if (pll_min < pll_max) {
-                debug("PLL Read window = %d\n", (pll_max - pll_min));
-                offset = (pll_max - pll_min) >> 1;
-                pll_min = 0xfff;
-                pll = 0;
-                while (pll < (pll_min + offset)) {
-                        ast2600_sdrammc_fpga_set_pll(info);
-                        dat1 = readl(SEARCH_RDWIN_ANCHOR_0);
-                        dat1 += readl(SEARCH_RDWIN_ANCHOR_1);
-                        if (dat1 == SEARCH_RDWIN_PTRN_SUM) {
-                                if (pll_min > pll) {
-                                        pll_min = pll;
-                                }
-                                debug("%d\n", pll);
-                        } else {
-                                pll_min = 0xfff;
-                                pll_max = 0x0;
-                        }
-                        pll += 1;
-                }
-		return 1;
-        } else {
-                debug("PLL Read window training fail\n");
+			win = win << 1;
+		}
+		if (gwin == 0)
+			win = 0x7;
+	}
+	debug("Set PLL Read Gating Window = %x\n", gwin);
+	writel(gwin, phy_setting + 0x0000);
+
+	debug("PLL Read Window training\n");
+	pll_min = 0xfff;
+	pll_max = 0x0;
+
+	debug("Search Window Start\n");
+	dat1 = readl(SEARCH_RDWIN_ANCHOR_0);
+	dat1 += readl(SEARCH_RDWIN_ANCHOR_1);
+	while (dat1 == SEARCH_RDWIN_PTRN_SUM) {
+		ast2600_sdrammc_fpga_set_pll(info);
+		dat1 = readl(SEARCH_RDWIN_ANCHOR_0);
+		dat1 += readl(SEARCH_RDWIN_ANCHOR_1);
+	}
+
+	debug("Search Window Margin\n");
+	pll = 0;
+	while (pll_max > 0 || pll < 256) {
+		ast2600_sdrammc_fpga_set_pll(info);
+		dat1 = readl(SEARCH_RDWIN_ANCHOR_0);
+		dat1 += readl(SEARCH_RDWIN_ANCHOR_1);
+		if (dat1 == SEARCH_RDWIN_PTRN_SUM) {
+			if (pll_min > pll)
+				pll_min = pll;
+
+			if (pll_max < pll)
+				pll_max = pll;
+
+			debug("%3d_(%3d:%3d)\n", pll, pll_min, pll_max);
+		} else if (pll_max > 0 && (pll_max - pll_min) > 20) {
+			break;
+		} else if (pll_max > 0) {
+			pll_min = 0xfff;
+			pll_max = 0x0;
+		}
+		pll += 1;
+	}
+	if (pll_min < pll_max) {
+		debug("PLL Read window = %d\n", (pll_max - pll_min));
+		offset = (pll_max - pll_min) >> 1;
+		pll_min = 0xfff;
+		pll = 0;
+		while (pll < (pll_min + offset)) {
+			ast2600_sdrammc_fpga_set_pll(info);
+			dat1 = readl(SEARCH_RDWIN_ANCHOR_0);
+			dat1 += readl(SEARCH_RDWIN_ANCHOR_1);
+			if (dat1 == SEARCH_RDWIN_PTRN_SUM) {
+				if (pll_min > pll) {
+					pll_min = pll;
+				}
+				debug("%d\n", pll);
+			} else {
+				pll_min = 0xfff;
+				pll_max = 0x0;
+			}
+			pll += 1;
+		}
+		return (1);
+	} else {
+		debug("PLL Read window training fail\n");
 		return 0;
         }
 }
