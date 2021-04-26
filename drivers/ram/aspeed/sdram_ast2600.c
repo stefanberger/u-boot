@@ -366,19 +366,19 @@ int ast2600_sdrammc_dg_test(struct dram_info *info, unsigned int datagen, u32 mo
 		data = readl(&regs->ecc_test_ctrl) & GENMASK(13, 12);
 
 		if (data & BIT(13))
-			return (0);
+			return 0;
 
 		if (++timeout > TIMEOUT_DRAM) {
 			printf("Timeout!!\n");
 			writel(0, &regs->ecc_test_ctrl);
 
-			return (0);
+			return 0;
 		}
 	} while (!data);
 
 	writel(0, &regs->ecc_test_ctrl);
 
-	return (1);
+	return 1;
 }
 
 int ast2600_sdrammc_cbr_test(struct dram_info *info)
@@ -498,7 +498,7 @@ static int ast2600_sdrammc_search_read_window(struct dram_info *info)
 
 #ifdef CONFIG_ASPEED_PALLADIUM
 	writel(0xc, phy_setting + 0x0000);
-	return (1);
+	return 1;
 #endif
         writel(SEARCH_RDWIN_PTRN_0, SEARCH_RDWIN_ANCHOR_0);
         writel(SEARCH_RDWIN_PTRN_1, SEARCH_RDWIN_ANCHOR_1);
@@ -610,10 +610,10 @@ static int ast2600_sdrammc_search_read_window(struct dram_info *info)
                         }
                         pll += 1;
                 }
-                return (1);
+		return 1;
         } else {
                 debug("PLL Read window training fail\n");
-                return (0);
+		return 0;
         }
 }
 #endif /* end of "#if defined(CONFIG_FPGA_ASPEED) ||                           \
@@ -755,8 +755,8 @@ static void ast2600_sdrammc_common_init(struct ast2600_sdrammc_regs *regs)
 {
 	int i;
 
-    writel(MCR34_MREQI_DIS | MCR34_RESETN_DIS, &regs->power_ctrl);
-    writel(SDRAM_VIDEO_UNLOCK_KEY, &regs->gm_protection_key);
+	writel(MCR34_MREQI_DIS | MCR34_RESETN_DIS, &regs->power_ctrl);
+	writel(SDRAM_VIDEO_UNLOCK_KEY, &regs->gm_protection_key);
 	writel(0x101010, &regs->arbitration_ctrl);
 	writel(0x0FFFFCFC, &regs->req_limit_mask);
 
