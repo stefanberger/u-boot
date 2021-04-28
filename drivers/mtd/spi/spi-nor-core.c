@@ -595,6 +595,78 @@ erase_err:
 	return ret;
 }
 
+static int micron_read_nvcr(struct spi_nor *nor)
+{
+	int ret;
+	int val;
+
+	ret = nor->read_reg(nor, SPINOR_OP_MICRON_RDNVCR, (u8 *)&val, 2);
+	if (ret < 0) {
+		dev_err(nor->dev, "[Micron] error %d reading NVCR\n", ret);
+		return ret;
+	}
+
+	return val;
+}
+
+static int micron_write_nvcr(struct spi_nor *nor, int val)
+{
+	int ret;
+
+	write_enable(nor);
+
+	nor->cmd_buf[0] = val & 0xff;
+	nor->cmd_buf[1] = (val >> 8) & 0xff;
+
+	ret = nor->write_reg(nor, SPINOR_OP_MICRON_WRNVCR, nor->cmd_buf, 2);
+	if (ret < 0) {
+		dev_err(nor->dev,
+			"[Micron] error while writing configuration register\n");
+		return -EINVAL;
+	}
+
+	ret = spi_nor_wait_till_ready(nor);
+	if (ret) {
+		dev_err(nor->dev,
+			"[Micron] timeout while writing configuration register\n");
+		return ret;
+	}
+
+	return 0;
+}
+
+static int micron_read_cr_quad_enable(struct spi_nor *nor)
+{
+	int ret;
+
+	/* Check current Quad Enable bit value. */
+	ret = micron_read_nvcr(nor);
+	if (ret < 0) {
+		dev_err(dev, "[Micron] error while reading nonvolatile configuration register\n");
+		return -EINVAL;
+	}
+
+	if ((ret & MICRON_RST_HOLD_CTRL) == 0)
+		return 0;
+
+	ret &= ~MICRON_RST_HOLD_CTRL;
+
+	/* Keep the current value of the Status Register. */
+	ret = micron_write_nvcr(nor, ret);
+	if (ret < 0) {
+		dev_err(dev, "[Micron] error while writing nonvolatile configuration register\n");
+		return -EINVAL;
+	}
+
+	ret = micron_read_nvcr(nor);
+	if (ret > 0 && (ret & MICRON_RST_HOLD_CTRL)) {
+		dev_err(nor->dev, "[Micron] Quad bit not set\n");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 #ifdef CONFIG_SPI_FLASH_SPANSION
 /*
  * Erase for Spansion/Cypress Flash devices that has overlaid 4KB sectors at
@@ -2165,6 +2237,10 @@ static int spi_nor_init_params(struct spi_nor *nor,
 			}
 #endif
 		}
+
+		/* need to disable hold/reset pin feature */
+		if (JEDEC_MFR(info) == SNOR_MFR_ST)
+			params->quad_enable = micron_read_cr_quad_enable;
 	}
 
 	return 0;

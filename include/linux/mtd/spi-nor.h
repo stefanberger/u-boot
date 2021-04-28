@@ -115,6 +115,8 @@
 /* Used for Micron flashes only. */
 #define SPINOR_OP_RD_EVCR      0x65    /* Read EVCR register */
 #define SPINOR_OP_WD_EVCR      0x61    /* Write EVCR register */
+#define SPINOR_OP_MICRON_RDNVCR 0xB5   /* Read nonvolatile configuration register */
+#define SPINOR_OP_MICRON_WRNVCR 0xB1   /* Write nonvolatile configuration register */
 
 /* Status Register bits. */
 #define SR_WIP			BIT(0)	/* Write in progress */
@@ -133,6 +135,7 @@
 
 /* Enhanced Volatile Configuration Register bits */
 #define EVCR_QUAD_EN_MICRON	BIT(7)	/* Micron Quad I/O */
+#define MICRON_RST_HOLD_CTRL BIT(4)
 
 /* Flag Status Register bits */
 #define FSR_READY		BIT(7)	/* Device status, 0 = Busy, 1 = Ready */
