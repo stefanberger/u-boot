@@ -243,6 +243,17 @@ wait_lock:
 	movt    r1, #0x0004
 	str     r1, [r0]
 
+	/* Fix UART1 route problem on A3 */
+	ldr     r0, =0x1e789098
+	movw    r1, #0x0a30
+	movt    r1, #0x0000
+	str     r1, [r0]
+
+	ldr     r0, =0x1e78909c
+	movw    r1, #0x0000
+	movt    r1, #0x0000
+	str     r1, [r0]
+
 	/* MMIO decode setting */
 	ldr	r0, =AST_SCU_MMIO_DEC_SET
 	mov	r1, #0x2000
