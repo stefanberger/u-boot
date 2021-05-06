@@ -296,19 +296,15 @@ skip_fill_wip_bit:
 	ldr	r1, =AST_FMC_WDT1_CTRL_MODE
 	str	r0, [r1]
 
-#if 0
-	/* disable UART-based SoC Debug Interface UART5 and P2A bridge*/
+	/* disable backdoor for A1/A2 to align A3 design */
 	ldr     r0, =AST_SCU_DEBUG_CTRL
-	ldr     r1, [r0]
-	orr     r1, #0x03
+	movw    r1, #0x0fff
+	movt	r1, #0x0000
 	str     r1, [r0]
 
-	/* disable UART-based SoC Debug Interface UART1 and LPC2AHB bridge */
 	ldr     r0, =AST_SCU_DEBUG_CTRL2
-	ldr     r1, [r0]
-	orr     r1, #0x0A
+	mov     r1, #0xff
 	str     r1, [r0]
-#endif
 
 	/* relocate mailbox insn. for cpuN polling SMP go signal */
 	adrl	r0, mailbox_insn
