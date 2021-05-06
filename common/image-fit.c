@@ -28,6 +28,7 @@ DECLARE_GLOBAL_DATA_PTR;
 #include <u-boot/md5.h>
 #include <u-boot/sha1.h>
 #include <u-boot/sha256.h>
+#include <u-boot/sha512.h>
 
 /*****************************************************************************/
 /* New uImage format routines */
@@ -984,8 +985,10 @@ int fit_image_get_data_and_size(const void *fit, int noffset,
 	if (external_data) {
 		debug("External Data\n");
 		ret = fit_image_get_data_size(fit, noffset, &len);
-		*data = fit + offset;
-		*size = len;
+		if (!ret) {
+			*data = fit + offset;
+			*size = len;
+		}
 	} else {
 		ret = fit_image_get_data(fit, noffset, data, size);
 	}
@@ -1132,29 +1135,19 @@ int fit_set_timestamp(void *fit, int noffset, time_t timestamp)
  *     0, on success
  *    -1, when algo is unsupported
  */
-int calculate_hash(const void *data, int data_len, const char *algo,
+int calculate_hash(const void *data, int data_len, const char *algo_name,
 			uint8_t *value, int *value_len)
 {
-	if (IMAGE_ENABLE_CRC32 && strcmp(algo, "crc32") == 0) {
-		*((uint32_t *)value) = crc32_wd(0, data, data_len,
-							CHUNKSZ_CRC32);
-		*((uint32_t *)value) = cpu_to_uimage(*((uint32_t *)value));
-		*value_len = 4;
-	} else if (IMAGE_ENABLE_SHA1 && strcmp(algo, "sha1") == 0) {
-		sha1_csum_wd((unsigned char *)data, data_len,
-			     (unsigned char *)value, CHUNKSZ_SHA1);
-		*value_len = 20;
-	} else if (IMAGE_ENABLE_SHA256 && strcmp(algo, "sha256") == 0) {
-		sha256_csum_wd((unsigned char *)data, data_len,
-			       (unsigned char *)value, CHUNKSZ_SHA256);
-		*value_len = SHA256_SUM_LEN;
-	} else if (IMAGE_ENABLE_MD5 && strcmp(algo, "md5") == 0) {
-		md5_wd((unsigned char *)data, data_len, value, CHUNKSZ_MD5);
-		*value_len = 16;
-	} else {
+	struct hash_algo *algo;
+
+	if (hash_lookup_algo(algo_name, &algo)) {
 		debug("Unsupported hash alogrithm\n");
 		return -1;
 	}
+
+	algo->hash_func_ws(data, data_len, value, algo->chunk_size);
+	*value_len = algo->digest_size;
+
 	return 0;
 }
 
@@ -1462,6 +1455,12 @@ int fit_image_check_comp(const void *fit, int noffset, uint8_t comp)
  */
 int fit_check_format(const void *fit)
 {
+	/* A FIT image must be a valid FDT */
+	if (fdt_check_header(fit)) {
+		debug("Wrong FIT format: not a flattened device tree\n");
+		return 0;
+	}
+
 	/* mandatory / node 'description' property */
 	if (fdt_getprop(fit, 0, FIT_DESC_PROP, NULL) == NULL) {
 		debug("Wrong FIT format: no description\n");
@@ -1868,7 +1867,7 @@ int fit_image_load(bootm_headers_t *images, ulong addr,
 		fit_uname = fit_get_name(fit, noffset, NULL);
 	}
 	if (noffset < 0) {
-		puts("Could not find subimage node\n");
+		printf("Could not find subimage node type '%s'\n", prop_name);
 		bootstage_error(bootstage_id + BOOTSTAGE_SUB_SUBNODE);
 		return -ENOENT;
 	}

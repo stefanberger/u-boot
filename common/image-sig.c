@@ -49,7 +49,31 @@ struct checksum_algo checksum_algos[] = {
 		.calculate_sign = EVP_sha256,
 #endif
 		.calculate = hash_calculate,
-	}
+	},
+#ifdef CONFIG_SHA384
+	{
+		.name = "sha384",
+		.checksum_len = SHA384_SUM_LEN,
+		.der_len = SHA384_DER_LEN,
+		.der_prefix = sha384_der_prefix,
+#if IMAGE_ENABLE_SIGN
+		.calculate_sign = EVP_sha384,
+#endif
+		.calculate = hash_calculate,
+	},
+#endif
+#ifdef CONFIG_SHA512
+	{
+		.name = "sha512",
+		.checksum_len = SHA512_SUM_LEN,
+		.der_len = SHA512_DER_LEN,
+		.der_prefix = sha512_der_prefix,
+#if IMAGE_ENABLE_SIGN
+		.calculate_sign = EVP_sha512,
+#endif
+		.calculate = hash_calculate,
+	},
+#endif
 
 };
 
@@ -211,7 +235,7 @@ static int fit_image_setup_verify(struct image_sign_info *info,
 	info->required_keynode = required_keynode;
 	printf("%s:%s", algo_name, info->keyname);
 
-	if (!info->checksum || !info->crypto) {
+	if (!info->checksum || !info->crypto || !info->padding) {
 		*err_msgp = "Unknown signature algorithm";
 		return -1;
 	}
@@ -330,20 +354,39 @@ int fit_image_verify_required_sigs(const void *fit, int image_noffset,
 	return 0;
 }
 
-int fit_config_check_sig(const void *fit, int noffset, int required_keynode,
-			 char **err_msgp)
+/**
+ * fit_config_check_sig() - Check the signature of a config
+ *
+ * @fit: FIT to check
+ * @noffset: Offset of configuration node (e.g. /configurations/conf-1)
+ * @required_keynode:	Offset in the control FDT of the required key node,
+ *			if any. If this is given, then the configuration wil not
+ *			pass verification unless that key is used. If this is
+ *			-1 then any signature will do.
+ * @conf_noffset: Offset of the configuration subnode being checked (e.g.
+ *	 /configurations/conf-1/kernel)
+ * @err_msgp:		In the event of an error, this will be pointed to a
+ *			help error string to display to the user.
+ * @return 0 if all verified ok, <0 on error
+ */
+static int fit_config_check_sig(const void *fit, int noffset,
+				int required_keynode, int conf_noffset,
+				char **err_msgp)
 {
 	char * const exc_prop[] = {"data"};
 	const char *prop, *end, *name;
 	struct image_sign_info info;
 	const uint32_t *strings;
+	const char *config_name;
 	uint8_t *fit_value;
 	int fit_value_len;
+	bool found_config;
 	int max_regions;
 	int i, prop_len;
 	char path[200];
 	int count;
 
+	config_name = fit_get_name(fit, conf_noffset, NULL);
 	debug("%s: fdt=%p, conf='%s', sig='%s'\n", __func__, gd_fdt_blob(),
 	      fit_get_name(fit, noffset, NULL),
 	      fit_get_name(gd_fdt_blob(), required_keynode, NULL));
@@ -384,9 +427,20 @@ int fit_config_check_sig(const void *fit, int noffset, int required_keynode,
 	char *node_inc[count];
 
 	debug("Hash nodes (%d):\n", count);
+	found_config = false;
 	for (name = prop, i = 0; name < end; name += strlen(name) + 1, i++) {
 		debug("   '%s'\n", name);
 		node_inc[i] = (char *)name;
+		if (!strncmp(FIT_CONFS_PATH, name, strlen(FIT_CONFS_PATH)) &&
+		    name[sizeof(FIT_CONFS_PATH) - 1] == '/' &&
+		    !strcmp(name + sizeof(FIT_CONFS_PATH), config_name)) {
+			debug("      (found config node %s)", config_name);
+			found_config = true;
+		}
+	}
+	if (!found_config) {
+		*err_msgp = "Selected config not in hashed nodes";
+		return -1;
 	}
 
 	/*
@@ -454,7 +508,7 @@ static int fit_config_verify_sig(const void *fit, int conf_noffset,
 		if (!strncmp(name, FIT_SIG_NODENAME,
 			     strlen(FIT_SIG_NODENAME))) {
 			ret = fit_config_check_sig(fit, noffset, sig_offset,
-						   &err_msg);
+						   conf_noffset, &err_msg);
 			if (ret) {
 				puts("- ");
 			} else {
@@ -470,13 +524,14 @@ static int fit_config_verify_sig(const void *fit, int conf_noffset,
 		goto error;
 	}
 
-	return verified ? 0 : -EPERM;
+	if (verified)
+		return 0;
 
 error:
 	printf(" error!\n%s for '%s' hash node in '%s' config node\n",
 	       err_msg, fit_get_name(fit, noffset, NULL),
 	       fit_get_name(fit, conf_noffset, NULL));
-	return -1;
+	return -EPERM;
 }
 
 int fit_config_verify_required_sigs(const void *fit, int conf_noffset,
