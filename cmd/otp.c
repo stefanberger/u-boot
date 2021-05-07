@@ -39,10 +39,11 @@ DECLARE_GLOBAL_DATA_PTR;
 
 #define OTP_PROG_SKIP			1
 
-#define OTP_KEY_TYPE_RSA		1
-#define OTP_KEY_TYPE_AES		2
-#define OTP_KEY_TYPE_VAULT		3
-#define OTP_KEY_TYPE_HMAC		4
+#define OTP_KEY_TYPE_RSA_PUB		1
+#define OTP_KEY_TYPE_RSA_PRIV		2
+#define OTP_KEY_TYPE_AES		3
+#define OTP_KEY_TYPE_VAULT		4
+#define OTP_KEY_TYPE_HMAC		5
 
 #define PBSTR "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
 #define PBWIDTH 60
@@ -139,27 +140,38 @@ static const struct otpkey_type a0_key_type[] = {
 	{0, OTP_KEY_TYPE_AES,   0, "AES-256 as OEM platform key for image encryption/decryption"},
 	{1, OTP_KEY_TYPE_VAULT, 0, "AES-256 as secret vault key"},
 	{4, OTP_KEY_TYPE_HMAC,  1, "HMAC as encrypted OEM HMAC keys in Mode 1"},
-	{8, OTP_KEY_TYPE_RSA,   1, "RSA-public as OEM DSS public keys in Mode 2"},
-	{9, OTP_KEY_TYPE_RSA,   0, "RSA-public as SOC public key"},
-	{10, OTP_KEY_TYPE_RSA,  0, "RSA-public as AES key decryption key"},
-	{13, OTP_KEY_TYPE_RSA,  0, "RSA-private as SOC private key"},
-	{14, OTP_KEY_TYPE_RSA,  0, "RSA-private as AES key decryption key"},
+	{8, OTP_KEY_TYPE_RSA_PUB,   1, "RSA-public as OEM DSS public keys in Mode 2"},
+	{9, OTP_KEY_TYPE_RSA_PUB,   0, "RSA-public as SOC public key"},
+	{10, OTP_KEY_TYPE_RSA_PUB,  0, "RSA-public as AES key decryption key"},
+	{13, OTP_KEY_TYPE_RSA_PRIV,  0, "RSA-private as SOC private key"},
+	{14, OTP_KEY_TYPE_RSA_PRIV,  0, "RSA-private as AES key decryption key"},
 };
 
 static const struct otpkey_type a1_key_type[] = {
 	{1, OTP_KEY_TYPE_VAULT, 0, "AES-256 as secret vault key"},
 	{2, OTP_KEY_TYPE_AES,   1, "AES-256 as OEM platform key for image encryption/decryption in Mode 2 or AES-256 as OEM DSS keys for Mode GCM"},
-	{8, OTP_KEY_TYPE_RSA,   1, "RSA-public as OEM DSS public keys in Mode 2"},
-	{10, OTP_KEY_TYPE_RSA,  0, "RSA-public as AES key decryption key"},
-	{14, OTP_KEY_TYPE_RSA,  0, "RSA-private as AES key decryption key"},
+	{8, OTP_KEY_TYPE_RSA_PUB,   1, "RSA-public as OEM DSS public keys in Mode 2"},
+	{10, OTP_KEY_TYPE_RSA_PUB,  0, "RSA-public as AES key decryption key"},
+	{14, OTP_KEY_TYPE_RSA_PRIV,  0, "RSA-private as AES key decryption key"},
 };
 
 static const struct otpkey_type a2_key_type[] = {
 	{1, OTP_KEY_TYPE_VAULT, 0, "AES-256 as secret vault key"},
 	{2, OTP_KEY_TYPE_AES,   1, "AES-256 as OEM platform key for image encryption/decryption in Mode 2 or AES-256 as OEM DSS keys for Mode GCM"},
-	{8, OTP_KEY_TYPE_RSA,   1, "RSA-public as OEM DSS public keys in Mode 2"},
-	{10, OTP_KEY_TYPE_RSA,  0, "RSA-public as AES key decryption key"},
-	{14, OTP_KEY_TYPE_RSA,  0, "RSA-private as AES key decryption key"},
+	{8, OTP_KEY_TYPE_RSA_PUB,   1, "RSA-public as OEM DSS public keys in Mode 2"},
+	{10, OTP_KEY_TYPE_RSA_PUB,  0, "RSA-public as AES key decryption key"},
+	{14, OTP_KEY_TYPE_RSA_PRIV,  0, "RSA-private as AES key decryption key"},
+};
+
+static const struct otpkey_type a3_key_type[] = {
+	{1, OTP_KEY_TYPE_VAULT, 0, "AES-256 as secret vault key"},
+	{2, OTP_KEY_TYPE_AES,   1, "AES-256 as OEM platform key for image encryption/decryption in Mode 2 or AES-256 as OEM DSS keys for Mode GCM"},
+	{8, OTP_KEY_TYPE_RSA_PUB,   1, "RSA-public as OEM DSS public keys in Mode 2"},
+	{9, OTP_KEY_TYPE_RSA_PUB,   1, "RSA-public as OEM DSS public keys in Mode 2(big endian)"},
+	{10, OTP_KEY_TYPE_RSA_PUB,  0, "RSA-public as AES key decryption key"},
+	{11, OTP_KEY_TYPE_RSA_PUB,  0, "RSA-public as AES key decryption key(big endian)"},
+	{12, OTP_KEY_TYPE_RSA_PRIV,  0, "RSA-private as AES key decryption key"},
+	{13, OTP_KEY_TYPE_RSA_PRIV,  0, "RSA-private as AES key decryption key(big endian)"},
 };
 
 static uint32_t  chip_version(void)
@@ -193,7 +205,7 @@ static uint32_t  chip_version(void)
 	} else if (rev_id == 0x0503020305030203) {
 		/* AST2620-A3 */
 		return OTP_AST2600A3;
-	} 
+	}
 
 	return -1;
 }
@@ -1033,7 +1045,8 @@ static int otp_print_data_info(struct otp_image_layout *image_layout)
 				printf("HMAC(SHA512)\n");
 				break;
 			}
-		} else if (key_info.key_type == OTP_KEY_TYPE_RSA) {
+		} else if (key_info.key_type == OTP_KEY_TYPE_RSA_PRIV ||
+			   key_info.key_type == OTP_KEY_TYPE_RSA_PUB) {
 			printf("RSA SHA Type: ");
 			switch (key_length) {
 			case 0:
@@ -1080,12 +1093,16 @@ static int otp_print_data_info(struct otp_image_layout *image_layout)
 				printf("AES Key 2:\n");
 				buf_print(&byte_buf[key_offset + 0x20], 0x20);
 			}
-
-		} else if (key_info.key_type == OTP_KEY_TYPE_RSA) {
+		} else if (key_info.key_type == OTP_KEY_TYPE_RSA_PRIV) {
 			printf("RSA mod:\n");
 			buf_print(&byte_buf[key_offset], len / 2);
 			printf("RSA exp:\n");
 			buf_print(&byte_buf[key_offset + (len / 2)], len / 2);
+		} else if (key_info.key_type == OTP_KEY_TYPE_RSA_PUB) {
+			printf("RSA mod:\n");
+			buf_print(&byte_buf[key_offset], len / 2);
+			printf("RSA exp:\n");
+			buf_print((uint8_t *)"\x01\x00\x01", 3);
 		}
 		if (last)
 			break;
@@ -2097,8 +2114,8 @@ static int do_ast_otp(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 		info_cb.conf_info_len = ARRAY_SIZE(a2_conf_info);
 		info_cb.strap_info = a2_strap_info;
 		info_cb.strap_info_len = ARRAY_SIZE(a2_strap_info);
-		info_cb.key_info = a2_key_type;
-		info_cb.key_info_len = ARRAY_SIZE(a2_key_type);
+		info_cb.key_info = a3_key_type;
+		info_cb.key_info_len = ARRAY_SIZE(a3_key_type);
 		break;
 	default:
 		printf("SOC is not supported\n");
