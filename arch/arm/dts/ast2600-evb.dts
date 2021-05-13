@@ -321,3 +321,8 @@
 	u-boot,dm-pre-reloc;
 	status = "okay";
 };
+
+&arcy {
+	u-boot,dm-pre-reloc;
+	status = "okay";
+};
