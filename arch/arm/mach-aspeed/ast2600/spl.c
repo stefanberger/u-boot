@@ -67,6 +67,17 @@ u32 spl_boot_device(void)
 	default:
 		break;
 	}
+#else
+	switch (aspeed_bootmode()) {
+	case AST_BOOTMODE_EMMC:
+		return BOOT_DEVICE_MMC1;
+	case AST_BOOTMODE_SPI:
+		return BOOT_DEVICE_RAM;
+	case AST_BOOTMODE_UART:
+		return BOOT_DEVICE_UART;
+	default:
+		break;
+	}
 #endif
 
 	return BOOT_DEVICE_NONE;
