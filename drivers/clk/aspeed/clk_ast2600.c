@@ -427,13 +427,16 @@ static u32 ast2600_get_sdio_clk_rate(struct ast2600_scu *scu)
 	u32 clkin = 0;
 	u32 clk_sel = readl(&scu->clk_sel4);
 	u32 div = (clk_sel >> 28) & 0x7;
+	u32 hw_rev = readl(&scu->chip_id1);
 
 	if (clk_sel & BIT(8))
 		clkin = ast2600_get_apll_rate(scu);
 	else
 		clkin = ast2600_get_hclk(scu);
 
-	div = (div + 1) << 1;
+	div = (1 + div) * 2;
+	if (((hw_rev & GENMASK(23, 16)) >> 16) >= 2)
+		div = (div & 0xf) ? div : 1;
 
 	return (clkin / div);
 }
