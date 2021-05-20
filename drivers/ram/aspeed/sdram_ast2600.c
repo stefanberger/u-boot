@@ -43,6 +43,10 @@
 /* bit-field of AST_SCU_HANDSHAKE */
 #define SCU_SDRAM_INIT_READY_MASK	BIT(6)
 #define SCU_SDRAM_INIT_BY_SOC_MASK	BIT(7)
+#define SCU_P2A_BRIDGE_DISABLE		BIT(12)
+#define SCU_HANDSHAKE_MASK                                                     \
+	(SCU_SDRAM_INIT_READY_MASK | SCU_SDRAM_INIT_BY_SOC_MASK |              \
+	 SCU_P2A_BRIDGE_DISABLE)
 
 /* bit-field of AST_SCU_MPLL */
 #define SCU_MPLL_RESET			BIT(25)
@@ -893,6 +897,7 @@ static int ast2600_sdrammc_probe(struct udevice *dev)
 
 	if (readl(priv->scu + AST_SCU_HANDSHAKE) & SCU_SDRAM_INIT_READY_MASK) {
 		printf("already initialized, ");
+		setbits_le32(priv->scu + AST_SCU_HANDSHAKE, SCU_HANDSHAKE_MASK);
 		ast2600_sdrammc_update_size(priv);
 		return 0;
 	}
@@ -963,10 +968,7 @@ L_ast2600_sdramphy_train:
 #ifdef CONFIG_ASPEED_ECC
 	ast2600_sdrammc_ecc_enable(priv);
 #endif
-
-	writel(readl(priv->scu + AST_SCU_HANDSHAKE) | SCU_SDRAM_INIT_READY_MASK,
-	       priv->scu + AST_SCU_HANDSHAKE);
-
+	setbits_le32(priv->scu + AST_SCU_HANDSHAKE, SCU_HANDSHAKE_MASK);
 	clrbits_le32(&regs->intr_ctrl, MCR50_RESET_ALL_INTR);
 	ast2600_sdrammc_lock(priv);
 	return 0;
