@@ -41,12 +41,18 @@ struct phy_desc {
 	PHY_ENGINE cfg;
 };
 
-#define PHY_LOOKUP_N 33
+#define PHY_LOOKUP_N 34
 static const struct phy_desc phy_lookup_tbl[PHY_LOOKUP_N] = {
 	{ .id1 = 0x001c,
 	  .id2 = 0xc916,
 	  .id2_mask = 0xffff,
 	  .name = "RTL8211F",
+	  .cfg.fp_set = phy_realtek5,
+	  .cfg.fp_clr = recov_phy_realtek5 },
+	{ .id1 = 0x001c,
+	  .id2 = 0xc859,
+	  .id2_mask = 0xffff,
+	  .name = "RTL8211FD-VX",
 	  .cfg.fp_set = phy_realtek5,
 	  .cfg.fp_clr = recov_phy_realtek5 },
 	{ .id1 = 0x001c,
