@@ -154,7 +154,7 @@ static const u32 ddr_max_grant_params[4] = { 0x88888888, 0x88888888, 0x88888888,
 static const u32 ddr4_ac_timing[4] = { 0x040e0307, 0x0f4711f1, 0x0e060304,
 				       0x00001240 };
 
-static const u32 ddr_max_grant_params[4] = { 0x44444444, 0x44444466, 0x44444444,
+static const u32 ddr_max_grant_params[4] = { 0x44444488, 0x444444ee, 0x44444444,
 					     0x44444444 };
 #endif
 
@@ -761,8 +761,13 @@ static void ast2600_sdrammc_common_init(struct ast2600_sdrammc_regs *regs)
 
 	writel(MCR34_MREQI_DIS | MCR34_RESETN_DIS, &regs->power_ctrl);
 	writel(SDRAM_VIDEO_UNLOCK_KEY, &regs->gm_protection_key);
-	writel(0x101010, &regs->arbitration_ctrl);
-	writel(0x0FFFFCFC, &regs->req_limit_mask);
+	/* [6:0] : Group 1 request queued number = 20
+	 * [14:8] : Group 2 request queued number = 20
+	 * [20:16] : R/W max-grant count for RQ output arbitration = 16
+	 */
+	writel(0x101414, &regs->arbitration_ctrl);
+	/* Request Queued Limitation for REQ8/9 USB1/2 */
+	writel(0x0FFFFCFF, &regs->req_limit_mask);
 
 	for (i = 0; i < ARRAY_SIZE(ddr_max_grant_params); ++i)
 		writel(ddr_max_grant_params[i], &regs->max_grant_len[i]);
