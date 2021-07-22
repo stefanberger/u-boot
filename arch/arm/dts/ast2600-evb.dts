@@ -205,7 +205,7 @@
 
 &emmc {
 	u-boot,dm-pre-reloc;
-	timing-phase = <0x700ff>;
+	timing-phase = <0x000f0097>;
 };
 
 &emmc_slot0 {
@@ -218,7 +218,7 @@
 };
 
 &sdhci {
-	timing-phase = <0xc6ffff>;
+	timing-phase = <0x00c6375f>;
 };
 
 &sdhci_slot0 {
