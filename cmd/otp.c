@@ -1950,21 +1950,30 @@ static int do_otpinfo(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 	return CMD_RET_SUCCESS;
 }
 
-static int do_otpprotect(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
+static int _do_otpprotect(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[], int preg)
 {
 	int input;
 	int bit_offset;
-	int prog_address;
+	u32 prog_address;
 	int ret;
+	char info[10];
+
+	if (preg) {
+		sprintf(info, "register ");
+		prog_address = 0xe08;
+	} else {
+		info[0] = 0;
+		prog_address = 0xe0c;
+	}
 
 	if (argc != 3 && argc != 2)
 		return CMD_RET_USAGE;
 
-	if (!strcmp(argv[0], "o")) {
+	if (!strcmp(argv[1], "o")) {
 		input = simple_strtoul(argv[2], NULL, 16);
 	} else {
 		input = simple_strtoul(argv[1], NULL, 16);
-		printf("OTPSTRAP[%d] will be protected\n", input);
+		printf("OTPSTRAP[%d] %swill be protected\n", input, info);
 		printf("type \"YES\" (no quotes) to continue:\n");
 		if (!confirm_yesno()) {
 			printf(" Aborting\n");
@@ -1972,30 +1981,41 @@ static int do_otpprotect(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[
 		}
 	}
 
-	prog_address = 0x800;
 	if (input < 32) {
 		bit_offset = input;
-		prog_address |= 0x60c;
 	} else if (input < 64) {
 		bit_offset = input - 32;
-		prog_address |= 0x60e;
+		prog_address += 2;
 	} else {
 		return CMD_RET_USAGE;
 	}
 
-	if (verify_bit(prog_address, bit_offset, 1) == 0)
-		printf("OTPSTRAP[%d] already protected\n", input);
+	writel(OTP_PASSWD, OTP_PROTECT_KEY); //password
+	if (verify_bit(prog_address, bit_offset, 1) == 0) {
+		printf("OTPSTRAP[%d] %salready protected\n", input, info);
+		return CMD_RET_SUCCESS;
+	}
 
 	ret = otp_prog_bit(1, prog_address, bit_offset);
 	otp_soak(0);
 
 	if (ret) {
-		printf("OTPSTRAP[%d] is protected\n", input);
+		printf("OTPSTRAP[%d] %sis protected\n", input, info);
 		return CMD_RET_SUCCESS;
 	}
 
-	printf("Protect OTPSTRAP[%d] fail\n", input);
+	printf("Protect OTPSTRAP[%d] %sfail\n", input, info);
 	return CMD_RET_FAILURE;
+}
+
+static int do_otpprotect(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
+{
+	return _do_otpprotect(cmdtp, flag, argc, argv, 0);
+}
+
+static int do_otprprotect(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
+{
+	return _do_otpprotect(cmdtp, flag, argc, argv, 1);
 }
 
 static int do_otpver(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
@@ -2013,6 +2033,7 @@ static cmd_tbl_t cmd_otp[] = {
 	U_BOOT_CMD_MKENT(prog, 3, 0, do_otpprog, "", ""),
 	U_BOOT_CMD_MKENT(pb, 6, 0, do_otppb, "", ""),
 	U_BOOT_CMD_MKENT(protect, 3, 0, do_otpprotect, "", ""),
+	U_BOOT_CMD_MKENT(rprotect, 3, 0, do_otprprotect, "", ""),
 	U_BOOT_CMD_MKENT(cmp, 3, 0, do_otpcmp, "", ""),
 };
 
@@ -2020,6 +2041,7 @@ static int do_ast_otp(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 {
 	cmd_tbl_t *cp;
 	u32 ver;
+	int ret;
 
 	cp = find_cmd_tbl(argv[1], cmd_otp, ARRAY_SIZE(cmd_otp));
 
@@ -2075,7 +2097,10 @@ static int do_ast_otp(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 		return CMD_RET_FAILURE;
 	}
 
-	return cp->cmd(cmdtp, flag, argc, argv);
+	ret = cp->cmd(cmdtp, flag, argc, argv);
+	writel(1, OTP_PROTECT_KEY); //password
+
+	return ret;
 }
 
 U_BOOT_CMD(otp, 7, 0,  do_ast_otp,
@@ -2089,5 +2114,6 @@ U_BOOT_CMD(otp, 7, 0,  do_ast_otp,
 	   "otp pb conf|data [o] <otp_dw_offset> <bit_offset> <value>\n"
 	   "otp pb strap [o] <bit_offset> <value>\n"
 	   "otp protect [o] <bit_offset>\n"
+	   "otp rprotect [o] <bit_offset>\n"
 	   "otp cmp <addr> <otp_dw_offset>\n"
 	  );
