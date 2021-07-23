@@ -1199,30 +1199,37 @@ static int otp_prog_conf(struct otp_image_layout *image_layout)
 
 static int otp_strap_bit_confirm(struct otpstrap_status *otpstrap, int offset, int ibit, int bit, int pbit, int rpbit)
 {
-	if (ibit == 1) {
+	int prog_flag = 0;
+
+	// ignore this bit
+	if (ibit == 1)
 		return OTP_SUCCESS;
-	} else {
-		printf("OTPSTRAP[%X]:\n", offset);
-	}
+	printf("OTPSTRAP[%X]:\n", offset);
+
 	if (bit == otpstrap->value) {
-		printf("    The value is same as before, skip it.\n");
-		return OTP_PROG_SKIP;
+		if (!pbit && !rpbit) {
+			printf("    The value is same as before, skip it.\n");
+			return OTP_PROG_SKIP;
+		}
+		printf("    The value is same as before.\n");
+	} else {
+		prog_flag = 1;
 	}
-	if (otpstrap->protected == 1) {
+	if (otpstrap->protected == 1 && prog_flag) {
 		printf("    This bit is protected and is not writable\n");
 		return OTP_FAILURE;
 	}
-	if (otpstrap->remain_times == 0) {
+	if (otpstrap->remain_times == 0 && prog_flag) {
 		printf("    This bit is no remaining times to write.\n");
 		return OTP_FAILURE;
 	}
-	if (pbit == 1) {
+	if (pbit == 1)
 		printf("    This bit will be protected and become non-writable.\n");
-	}
-	if (rpbit == 1 && info_cb.version != OTP_AST2600A0) {
+	if (rpbit == 1 && info_cb.version != OTP_AST2600A0)
 		printf("    The relative register will be protected.\n");
-	}
-	printf("    Write 1 to OTPSTRAP[%X] OPTION[%X], that value becomes from %d to %d.\n", offset, otpstrap->writeable_option + 1, otpstrap->value, otpstrap->value ^ 1);
+	if (prog_flag)
+		printf("    Write 1 to OTPSTRAP[%X] OPTION[%X], that value becomes from %d to %d.\n", offset, otpstrap->writeable_option + 1, otpstrap->value, otpstrap->value ^ 1);
+
 	return OTP_SUCCESS;
 }
 
@@ -1235,7 +1242,6 @@ static int otp_strap_image_confirm(struct otp_image_layout *image_layout)
 	uint32_t *strap_pro;
 	int bit, pbit, ibit, rpbit;
 	int fail = 0;
-	int skip = -1;
 	int ret;
 	struct otpstrap_status otpstrap[64];
 
@@ -1266,23 +1272,14 @@ static int otp_strap_image_confirm(struct otp_image_layout *image_layout)
 			rpbit = 0;
 		}
 		ret = otp_strap_bit_confirm(&otpstrap[i], i, ibit, bit, pbit, rpbit);
-		if (ret == OTP_PROG_SKIP) {
-			if (skip == -1)
-				skip = 1;
-			continue;
-		} else {
-			skip = 1;
-		}
 
 		if (ret == OTP_FAILURE)
 			fail = 1;
 	}
 	if (fail == 1)
 		return OTP_FAILURE;
-	else if (skip == 1)
-		return OTP_PROG_SKIP;
-
-	return OTP_SUCCESS;
+	else
+		return OTP_SUCCESS;
 }
 
 static int otp_print_strap(int start, int count)
@@ -1376,6 +1373,7 @@ static int otp_prog_strap(struct otp_image_layout *image_layout)
 	int bit, pbit, ibit, offset, rpbit;
 	int fail = 0;
 	int ret;
+	int prog_flag = 0;
 	struct otpstrap_status otpstrap[64];
 
 	strap = (uint32_t *)image_layout->strap;
@@ -1423,21 +1421,25 @@ static int otp_prog_strap(struct otp_image_layout *image_layout)
 		if (ibit == 1) {
 			continue;
 		}
-		if (bit == otpstrap[i].value) {
-			continue;
-		}
-		if (otpstrap[i].protected == 1) {
+		if (bit == otpstrap[i].value)
+			prog_flag = 0;
+		else
+			prog_flag = 1;
+
+		if (otpstrap[i].protected == 1 && prog_flag) {
 			fail = 1;
 			continue;
 		}
-		if (otpstrap[i].remain_times == 0) {
+		if (otpstrap[i].remain_times == 0 && prog_flag) {
 			fail = 1;
 			continue;
 		}
 
-		ret = otp_prog_bit(1, prog_address, offset);
-		if (!ret)
-			return OTP_FAILURE;
+		if (prog_flag) {
+			ret = otp_prog_bit(1, prog_address, offset);
+			if (!ret)
+				return OTP_FAILURE;
+		}
 
 		if (rpbit == 1 && info_cb.version != OTP_AST2600A0) {
 			prog_address = 0x800;
