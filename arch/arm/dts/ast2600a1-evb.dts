@@ -218,7 +218,7 @@
 };
 
 &sdhci {
-	timing-phase = <0xc6ffff>;
+	timing-phase = <0x01084747>;
 };
 
 &sdhci_slot0 {
