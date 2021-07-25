@@ -168,7 +168,63 @@ static const struct otpkey_type a3_key_type[] = {
 	{13, OTP_KEY_TYPE_RSA_PRIV,  0, "RSA-private as AES key decryption key(big endian)"},
 };
 
-static u32  chip_version(void)
+static int get_dw_bit(u32 *rid, int offset)
+{
+	int bit_offset;
+	int i;
+
+	if (offset < 32) {
+		i = 0;
+		bit_offset = offset;
+	} else {
+		i = 1;
+		bit_offset = offset - 32;
+	}
+	if ((rid[i] >> bit_offset) & 0x1)
+		return 1;
+	else
+		return 0;
+}
+
+static int get_rid_num(u32 *rid)
+{
+	int i;
+	int fz = 0;
+	int rid_num = 0;
+	int ret = 0;
+
+	for (i = 0; i < 64; i++) {
+		if (get_dw_bit(rid, i) == 0) {
+			if (!fz)
+				fz = 1;
+
+		} else {
+			rid_num++;
+			if (fz)
+				ret = OTP_FAILURE;
+		}
+	}
+	if (ret)
+		return ret;
+
+	return rid_num;
+}
+
+static void buf_print(u8 *buf, int len)
+{
+	int i;
+
+	printf("      00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\n");
+	for (i = 0; i < len; i++) {
+		if (i % 16 == 0)
+			printf("%04X: ", i);
+		printf("%02X ", buf[i]);
+		if ((i + 1) % 16 == 0)
+			printf("\n");
+	}
+}
+
+static u32 chip_version(void)
 {
 	u64 rev_id;
 
@@ -482,8 +538,10 @@ static int otp_prog_bit(u32 value, u32 prog_address, u32 bit_offset)
 			break;
 		}
 	}
+	if (pass)
+		return OTP_SUCCESS;
 
-	return pass;
+	return OTP_FAILURE;
 }
 
 static void otp_prog_dw(u32 value, u32 ignore, u32 prog_address)
@@ -639,6 +697,29 @@ static void otp_strap_status(struct otpstrap_status *otpstrap)
 	}
 }
 
+static void otp_print_revid(u32 *rid)
+{
+	int bit_offset;
+	int i, j;
+
+	printf("     0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f\n");
+	printf("___________________________________________________\n");
+	for (i = 0; i < 64; i++) {
+		if (i < 32) {
+			j = 0;
+			bit_offset = i;
+		} else {
+			j = 1;
+			bit_offset = i - 32;
+		}
+		if (i % 16 == 0)
+			printf("%2x | ", i);
+		printf("%d  ", (rid[j] >> bit_offset) & 0x1);
+		if ((i + 1) % 16 == 0)
+			printf("\n");
+	}
+}
+
 static int otp_print_conf_image(struct otp_image_layout *image_layout)
 {
 	const struct otpconf_info *conf_info = info_cb.conf_info;
@@ -650,7 +731,9 @@ static int otp_print_conf_image(struct otp_image_layout *image_layout)
 	u32 otp_value;
 	u32 otp_ignore;
 	int fail = 0;
+	int rid_num = 0;
 	char valid_bit[20];
+	int fz;
 	int i;
 	int j;
 
@@ -711,6 +794,33 @@ static int otp_print_conf_image(struct otp_image_layout *image_layout)
 		} else {
 			printf("%s\n", conf_info[i].information);
 		}
+	}
+
+	if (OTPCFG[0xa] != 0 || OTPCFG[0xb] != 0) {
+		if (OTPCFG_IGNORE[0xa] != 0 && OTPCFG_IGNORE[0xb] != 0) {
+			printf("OTP revision ID is invalid.\n");
+			fail = 1;
+		} else {
+			fz = 0;
+			for (i = 0; i < 64; i++) {
+				if (get_dw_bit(&OTPCFG[0xa], i) == 0) {
+					if (!fz)
+						fz = 1;
+				} else {
+					rid_num++;
+					if (fz) {
+						printf("OTP revision ID is invalid.\n");
+						fail = 1;
+						break;
+					}
+				}
+			}
+		}
+		if (fail)
+			printf("OTP revision ID\n");
+		else
+			printf("OTP revision ID: 0x%x\n", rid_num);
+		otp_print_revid(&OTPCFG[0xa]);
 	}
 
 	if (fail)
@@ -952,20 +1062,6 @@ static int otp_print_strap_info(int view)
 		return OTP_FAILURE;
 
 	return OTP_SUCCESS;
-}
-
-static void buf_print(u8 *buf, int len)
-{
-	int i;
-
-	printf("      00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\n");
-	for (i = 0; i < len; i++) {
-		if (i % 16 == 0)
-			printf("%04X: ", i);
-		printf("%02X ", buf[i]);
-		if ((i + 1) % 16 == 0)
-			printf("\n");
-	}
 }
 
 static int otp_print_data_info(struct otp_image_layout *image_layout)
@@ -1407,7 +1503,7 @@ static int otp_prog_strap(struct otp_image_layout *image_layout)
 
 		if (prog_flag) {
 			ret = otp_prog_bit(1, prog_address, offset);
-			if (!ret)
+			if (ret)
 				return OTP_FAILURE;
 		}
 
@@ -1419,7 +1515,7 @@ static int otp_prog_strap(struct otp_image_layout *image_layout)
 				prog_address |= 0x60a;
 
 			ret = otp_prog_bit(1, prog_address, offset);
-			if (!ret)
+			if (ret)
 				return OTP_FAILURE;
 		}
 
@@ -1431,7 +1527,7 @@ static int otp_prog_strap(struct otp_image_layout *image_layout)
 				prog_address |= 0x60e;
 
 			ret = otp_prog_bit(1, prog_address, offset);
-			if (!ret)
+			if (ret)
 				return OTP_FAILURE;
 		}
 	}
@@ -1761,13 +1857,97 @@ static int do_otp_prog_bit(int mode, int otp_dw_offset, int bit_offset, int valu
 	}
 	otp_soak(0);
 	if (ret) {
-		printf("SUCCESS\n");
-		return OTP_SUCCESS;
+		printf("OTP cannot be programed\n");
+		printf("FAILURE\n");
+		return OTP_FAILURE;
 	}
 
-	printf("OTP cannot be programed\n");
-	printf("FAILED\n");
-	return OTP_FAILURE;
+	printf("SUCCESS\n");
+	return OTP_SUCCESS;
+}
+
+static int otp_update_rid(u32 update_num, int force)
+{
+	u32 otp_rid[2];
+	int rid_num = 0;
+	int bit_offset;
+	int dw_offset;
+	int i;
+	int ret;
+
+	otp_read_config(10, &otp_rid[0]);
+	otp_read_config(11, &otp_rid[1]);
+
+	rid_num = get_rid_num(otp_rid);
+
+	if (rid_num < 0) {
+		printf("Currennt OTP revision ID cannot handle by this command,\n"
+		       "plase use 'otp pb' command to update it manually\n");
+		otp_print_revid(otp_rid);
+		return OTP_FAILURE;
+	}
+
+	printf("current OTP revision ID: 0x%x\n", rid_num);
+	otp_print_revid(otp_rid);
+	printf("input update number: 0x%x\n", update_num);
+
+	if (rid_num >= update_num) {
+		printf("OTP rev_id is bigger than 0x%x\n", update_num);
+		printf("Skip\n");
+		return OTP_FAILURE;
+	}
+
+	for (i = rid_num; i < update_num; i++) {
+		if (i < 32) {
+			dw_offset = 0xa;
+			bit_offset = i;
+		} else {
+			dw_offset = 0xb;
+			bit_offset = i - 32;
+		}
+		printf("OTPCFG%X[%d]", dw_offset, bit_offset);
+		if (i + 1 != update_num)
+			printf(", ");
+	}
+
+	printf(" will be programmed\n");
+	if (force == 0) {
+		printf("type \"YES\" (no quotes) to continue:\n");
+		if (!confirm_yesno()) {
+			printf(" Aborting\n");
+			return OTP_FAILURE;
+		}
+	}
+
+	ret = 0;
+	for (i = rid_num; i < update_num; i++) {
+		if (i < 32) {
+			dw_offset = 0xa04;
+			bit_offset = i;
+		} else {
+			dw_offset = 0xa06;
+			bit_offset = i - 32;
+		}
+		if (otp_prog_bit(1, dw_offset, bit_offset)) {
+			printf("OTPCFG%X[%d] programming failed\n", dw_offset, bit_offset);
+			ret = OTP_FAILURE;
+			break;
+		}
+	}
+
+	otp_read_config(10, &otp_rid[0]);
+	otp_read_config(11, &otp_rid[1]);
+	rid_num = get_rid_num(otp_rid);
+	if (rid_num >= 0)
+		printf("OTP revision ID: 0x%x\n", rid_num);
+	else
+		printf("OTP revision ID\n");
+	otp_print_revid(otp_rid);
+	if (!ret)
+		printf("SUCCESS\n");
+	else
+		printf("FAILED\n");
+	return ret;
 }
 
 static int do_otpread(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
@@ -2000,12 +2180,12 @@ static int _do_otpprotect(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv
 	otp_soak(0);
 
 	if (ret) {
-		printf("OTPSTRAP[%d] %sis protected\n", input, info);
-		return CMD_RET_SUCCESS;
+		printf("Protect OTPSTRAP[%d] %sfail\n", input, info);
+		return CMD_RET_FAILURE;
 	}
 
-	printf("Protect OTPSTRAP[%d] %sfail\n", input, info);
-	return CMD_RET_FAILURE;
+	printf("OTPSTRAP[%d] %sis protected\n", input, info);
+	return CMD_RET_SUCCESS;
 }
 
 static int do_otpprotect(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
@@ -2026,6 +2206,61 @@ static int do_otpver(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 	return CMD_RET_SUCCESS;
 }
 
+static int do_otpupdate(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
+{
+	u32 update_num;
+	int force = 0;
+	int ret;
+
+	if (argc == 3) {
+		if (strcmp(argv[1], "o"))
+			return CMD_RET_USAGE;
+		force = 1;
+		update_num = simple_strtoul(argv[2], NULL, 16);
+	} else if (argc == 2) {
+		update_num = simple_strtoul(argv[1], NULL, 16);
+	} else {
+		return CMD_RET_USAGE;
+	}
+
+	if (update_num > 64)
+		return CMD_RET_USAGE;
+	writel(OTP_PASSWD, OTP_PROTECT_KEY); //password
+	ret = otp_update_rid(update_num, force);
+	if (ret)
+		return CMD_RET_FAILURE;
+	return CMD_RET_SUCCESS;
+}
+
+static int do_otprid(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
+{
+	u32 otp_rid[2];
+	int rid_num = 0;
+	int ret;
+
+	if (argc != 1)
+		return CMD_RET_USAGE;
+
+	writel(OTP_PASSWD, OTP_PROTECT_KEY); //password
+	otp_read_config(10, &otp_rid[0]);
+	otp_read_config(11, &otp_rid[1]);
+
+	rid_num = get_rid_num(otp_rid);
+
+	if (rid_num >= 0) {
+		printf("current OTP revision ID: 0x%x\n", rid_num);
+		ret = CMD_RET_SUCCESS;
+	} else {
+		printf("Currennt OTP revision ID cannot handle by 'otp update',\n"
+		       "plase use 'otp pb' command to update it manually\n"
+		       "current OTP revision ID\n");
+		ret = CMD_RET_FAILURE;
+	}
+	otp_print_revid(otp_rid);
+
+	return ret;
+}
+
 static cmd_tbl_t cmd_otp[] = {
 	U_BOOT_CMD_MKENT(version, 1, 0, do_otpver, "", ""),
 	U_BOOT_CMD_MKENT(read, 4, 0, do_otpread, "", ""),
@@ -2035,6 +2270,8 @@ static cmd_tbl_t cmd_otp[] = {
 	U_BOOT_CMD_MKENT(protect, 3, 0, do_otpprotect, "", ""),
 	U_BOOT_CMD_MKENT(rprotect, 3, 0, do_otprprotect, "", ""),
 	U_BOOT_CMD_MKENT(cmp, 3, 0, do_otpcmp, "", ""),
+	U_BOOT_CMD_MKENT(update, 3, 0, do_otpupdate, "", ""),
+	U_BOOT_CMD_MKENT(rid, 1, 0, do_otprid, "", ""),
 };
 
 static int do_ast_otp(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
@@ -2115,5 +2352,6 @@ U_BOOT_CMD(otp, 7, 0,  do_ast_otp,
 	   "otp pb strap [o] <bit_offset> <value>\n"
 	   "otp protect [o] <bit_offset>\n"
 	   "otp rprotect [o] <bit_offset>\n"
-	   "otp cmp <addr> <otp_dw_offset>\n"
+	   "otp update [o] <revision_id>\n"
+	   "otp rid\n"
 	  );
