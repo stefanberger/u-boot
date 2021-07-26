@@ -2,6 +2,7 @@
 /*
  * Copyright 2021 Aspeed Technology Inc.
  */
+
 #include <stdlib.h>
 #include <common.h>
 #include <console.h>
@@ -63,10 +64,33 @@ DECLARE_GLOBAL_DATA_PTR;
 #define OTP_REGION_OFFSET(info)	(info & 0xffff)
 #define OTP_IMAGE_SIZE(info)	(info & 0xffff)
 
-#define OTP_AST2600A0		0
-#define OTP_AST2600A1		1
-#define OTP_AST2600A2		2
-#define OTP_AST2600A3		3
+#define OTP_A0		0
+#define OTP_A1		1
+#define OTP_A2		2
+#define OTP_A3		3
+
+#define ID0_AST2600A0	0x05000303
+#define ID1_AST2600A0	0x05000303
+#define ID0_AST2600A1	0x05010303
+#define ID1_AST2600A1	0x05010203
+#define ID0_AST2600A2	0x05010303
+#define ID1_AST2600A2	0x05020303
+#define ID0_AST2600A3	0x05030303
+#define ID1_AST2600A3	0x05030303
+#define ID0_AST2620A1	0x05010203
+#define ID1_AST2620A1	0x05010203
+#define ID0_AST2620A2	0x05010203
+#define ID1_AST2620A2	0x05020203
+#define ID0_AST2620A3	0x05030203
+#define ID1_AST2620A3	0x05030203
+#define ID0_AST2620A3	0x05030203
+#define ID1_AST2620A3	0x05030203
+#define ID0_AST2605A2	0x05010103
+#define ID1_AST2605A2	0x05020103
+#define ID0_AST2605A3	0x05030103
+#define ID1_AST2605A3	0x05030103
+#define ID0_AST2625A3	0x05030403
+#define ID1_AST2625A3	0x05030403
 
 struct otp_header {
 	u8	otp_magic[8];
@@ -105,13 +129,13 @@ struct otpkey_type {
 
 struct otp_info_cb {
 	int version;
+	char ver_name[3];
 	const struct otpstrap_info *strap_info;
 	int strap_info_len;
 	const struct otpconf_info *conf_info;
 	int conf_info_len;
 	const struct otpkey_type *key_info;
 	int key_info_len;
-
 };
 
 struct otp_image_layout {
@@ -226,37 +250,42 @@ static void buf_print(u8 *buf, int len)
 
 static u32 chip_version(void)
 {
-	u64 rev_id;
+	u32 revid0, revid1;
 
-	rev_id = readl(ASPEED_REVISION_ID0);
-	rev_id = ((u64)readl(ASPEED_REVISION_ID1) << 32) | rev_id;
+	revid0 = readl(ASPEED_REVISION_ID0);
+	revid1 = readl(ASPEED_REVISION_ID1);
 
-	if (rev_id == 0x0500030305000303) {
+	if (revid0 == ID0_AST2600A0 && revid1 == ID1_AST2600A0) {
 		/* AST2600-A0 */
-		return OTP_AST2600A0;
-	} else if (rev_id == 0x0501030305010303) {
+		return OTP_A0;
+	} else if (revid0 == ID0_AST2600A1 && revid1 == ID1_AST2600A1) {
 		/* AST2600-A1 */
-		return OTP_AST2600A1;
-	} else if (rev_id == 0x0501020305010203) {
-		/* AST2620-A1 */
-		return OTP_AST2600A1;
-	} else if (rev_id == 0x0502030305010303) {
+		return OTP_A1;
+	} else if (revid0 == ID0_AST2600A2 && revid1 == ID1_AST2600A2) {
 		/* AST2600-A2 */
-		return OTP_AST2600A2;
-	} else if (rev_id == 0x0502020305010203) {
-		/* AST2620-A2 */
-		return OTP_AST2600A2;
-	} else if (rev_id == 0x0502010305010103) {
-		/* AST2605-A2 */
-		return OTP_AST2600A2;
-	} else if (rev_id == 0x0503030305030303) {
+		return OTP_A2;
+	} else if (revid0 == ID0_AST2600A3 && revid1 == ID1_AST2600A3) {
 		/* AST2600-A3 */
-		return OTP_AST2600A3;
-	} else if (rev_id == 0x0503020305030203) {
+		return OTP_A3;
+	} else if (revid0 == ID0_AST2620A1 && revid1 == ID1_AST2620A1) {
+		/* AST2620-A1 */
+		return OTP_A1;
+	} else if (revid0 == ID0_AST2620A2 && revid1 == ID1_AST2620A2) {
+		/* AST2620-A2 */
+		return OTP_A2;
+	} else if (revid0 == ID0_AST2620A3 && revid1 == ID1_AST2620A3) {
 		/* AST2620-A3 */
-		return OTP_AST2600A3;
+		return OTP_A3;
+	} else if (revid0 == ID0_AST2605A2 && revid1 == ID1_AST2605A2) {
+		/* AST2605-A2 */
+		return OTP_A2;
+	} else if (revid0 == ID0_AST2605A3 && revid1 == ID1_AST2605A3) {
+		/* AST2605-A3 */
+		return OTP_A3;
+	} else if (revid0 == ID0_AST2625A3 && revid1 == ID1_AST2625A3) {
+		/* AST2605-A3 */
+		return OTP_A3;
 	}
-
 	return -1;
 }
 
@@ -279,7 +308,7 @@ static void otp_write(u32 otp_addr, u32 data)
 
 static void otp_soak(int soak)
 {
-	if (info_cb.version == OTP_AST2600A2 || info_cb.version == OTP_AST2600A3) {
+	if (info_cb.version == OTP_A2 || info_cb.version == OTP_A3) {
 		switch (soak) {
 		case 0: //default
 			otp_write(0x3000, 0x0210); // Write MRA
@@ -504,7 +533,7 @@ static void _otp_prog_bit(u32 value, u32 prog_address, u32 bit_offset)
 		else
 			return;
 	} else {
-		if (info_cb.version != OTP_AST2600A3)
+		if (info_cb.version != OTP_A3)
 			prog_address |= 1 << 15;
 		if (!value)
 			prog_bit = 0x1 << bit_offset;
@@ -558,7 +587,7 @@ static void otp_prog_dw(u32 value, u32 ignore, u32 prog_address)
 			else
 				continue;
 		} else {
-			if (info_cb.version != OTP_AST2600A3)
+			if (info_cb.version != OTP_A3)
 				prog_address |= 1 << 15;
 			if (bit_value)
 				continue;
@@ -625,7 +654,7 @@ static void otp_strap_status(struct otpstrap_status *otpstrap)
 	int strap_end;
 	int i, j;
 
-	if (info_cb.version == OTP_AST2600A0) {
+	if (info_cb.version == OTP_A0) {
 		for (j = 0; j < 64; j++) {
 			otpstrap[j].value = 0;
 			otpstrap[j].remain_times = 7;
@@ -672,7 +701,7 @@ static void otp_strap_status(struct otpstrap_status *otpstrap)
 		}
 	}
 
-	if (info_cb.version != OTP_AST2600A0) {
+	if (info_cb.version != OTP_A0) {
 		otp_read_config(28, &OTPSTRAP_RAW[0]);
 		otp_read_config(29, &OTPSTRAP_RAW[1]);
 		for (j = 0; j < 32; j++) {
@@ -918,7 +947,7 @@ static int otp_print_strap_image(struct otp_image_layout *image_layout)
 	OTPSTRAP = (u32 *)image_layout->strap;
 	OTPSTRAP_PRO = (u32 *)image_layout->strap_pro;
 	OTPSTRAP_IGNORE = (u32 *)image_layout->strap_ignore;
-	if (info_cb.version == OTP_AST2600A0) {
+	if (info_cb.version == OTP_A0) {
 		OTPSTRAP_REG_PRO = NULL;
 		printf("BIT(hex)   Value       Protect     Description\n");
 	} else {
@@ -941,7 +970,7 @@ static int otp_print_strap_image(struct otp_image_layout *image_layout)
 		otp_protect = (OTPSTRAP_PRO[dw_offset] >> bit_offset) & mask;
 		otp_ignore = (OTPSTRAP_IGNORE[dw_offset] >> bit_offset) & mask;
 
-		if (info_cb.version != OTP_AST2600A0)
+		if (info_cb.version != OTP_A0)
 			otp_reg_protect = (OTPSTRAP_REG_PRO[dw_offset] >> bit_offset) & mask;
 		else
 			otp_reg_protect = 0;
@@ -963,7 +992,7 @@ static int otp_print_strap_image(struct otp_image_layout *image_layout)
 			       strap_info[i].bit_offset);
 		}
 		printf("0x%-10x", otp_value);
-		if (info_cb.version != OTP_AST2600A0)
+		if (info_cb.version != OTP_A0)
 			printf("0x%-10x", otp_reg_protect);
 		printf("0x%-10x", otp_protect);
 
@@ -997,7 +1026,7 @@ static int otp_print_strap_info(int view)
 	otp_strap_status(strap_status);
 
 	if (view) {
-		if (info_cb.version == OTP_AST2600A0)
+		if (info_cb.version == OTP_A0)
 			printf("BIT(hex) Value  Remains  Protect   Description\n");
 		else
 			printf("BIT(hex) Value  Remains  Reg_Protect Protect   Description\n");
@@ -1022,7 +1051,7 @@ static int otp_print_strap_info(int view)
 				printf("0x%-7X", strap_info[i].bit_offset + j);
 				printf("0x%-5X", strap_status[bit_offset + j].value);
 				printf("%-9d", strap_status[bit_offset + j].remain_times);
-				if (info_cb.version != OTP_AST2600A0)
+				if (info_cb.version != OTP_A0)
 					printf("0x%-10X", strap_status[bit_offset + j].reg_protected);
 				printf("0x%-7X", strap_status[bit_offset + j].protected);
 				if (strap_info[i].value == OTP_REG_RESERVED) {
@@ -1152,13 +1181,13 @@ static int otp_print_data_info(struct otp_image_layout *image_layout)
 		} else if (key_info.key_type == OTP_KEY_TYPE_AES) {
 			printf("AES Key:\n");
 			buf_print(&byte_buf[key_offset], 0x20);
-			if (info_cb.version == OTP_AST2600A0) {
+			if (info_cb.version == OTP_A0) {
 				printf("AES IV:\n");
 				buf_print(&byte_buf[key_offset + 0x20], 0x10);
 			}
 
 		} else if (key_info.key_type == OTP_KEY_TYPE_VAULT) {
-			if (info_cb.version == OTP_AST2600A0) {
+			if (info_cb.version == OTP_A0) {
 				printf("AES Key:\n");
 				buf_print(&byte_buf[key_offset], 0x20);
 				printf("AES IV:\n");
@@ -1299,7 +1328,7 @@ static int otp_strap_bit_confirm(struct otpstrap_status *otpstrap, int offset, i
 	}
 	if (pbit == 1)
 		printf("    This bit will be protected and become non-writable.\n");
-	if (rpbit == 1 && info_cb.version != OTP_AST2600A0)
+	if (rpbit == 1 && info_cb.version != OTP_A0)
 		printf("    The relative register will be protected.\n");
 	if (prog_flag)
 		printf("    Write 1 to OTPSTRAP[%X] OPTION[%X], that value becomes from %d to %d.\n", offset, otpstrap->writeable_option + 1, otpstrap->value, otpstrap->value ^ 1);
@@ -1336,7 +1365,7 @@ static int otp_strap_image_confirm(struct otp_image_layout *image_layout)
 			pbit = (strap_pro[1] >> (i - 32)) & 0x1;
 		}
 
-		if (info_cb.version != OTP_AST2600A0) {
+		if (info_cb.version != OTP_A0) {
 			if (i < 32)
 				rpbit = (strap_reg_protect[0] >> i) & 0x1;
 			else
@@ -1369,7 +1398,7 @@ static int otp_print_strap(int start, int count)
 
 	otp_strap_status(otpstrap);
 
-	if (info_cb.version == OTP_AST2600A0) {
+	if (info_cb.version == OTP_A0) {
 		remains = 7;
 		printf("BIT(hex)  Value  Option           Status\n");
 	} else {
@@ -1384,7 +1413,7 @@ static int otp_print_strap(int start, int count)
 		for (j = 0; j < remains; j++)
 			printf("%d ", otpstrap[i].option_array[j]);
 		printf("   ");
-		if (info_cb.version != OTP_AST2600A0)
+		if (info_cb.version != OTP_A0)
 			printf("%d           ", otpstrap[i].reg_protected);
 		if (otpstrap[i].protected == 1) {
 			printf("protected and not writable");
@@ -1476,7 +1505,7 @@ static int otp_prog_strap(struct otp_image_layout *image_layout)
 			prog_address |= ((otpstrap[i].writeable_option * 2 + 17) / 8) * 0x200;
 			prog_address |= ((otpstrap[i].writeable_option * 2 + 17) % 8) * 0x2;
 		}
-		if (info_cb.version != OTP_AST2600A0) {
+		if (info_cb.version != OTP_A0) {
 			if (i < 32)
 				rpbit = (strap_reg_protect[0] >> i) & 0x1;
 			else
@@ -1507,7 +1536,7 @@ static int otp_prog_strap(struct otp_image_layout *image_layout)
 				return OTP_FAILURE;
 		}
 
-		if (rpbit == 1 && info_cb.version != OTP_AST2600A0) {
+		if (rpbit == 1 && info_cb.version != OTP_A0) {
 			prog_address = 0x800;
 			if (i < 32)
 				prog_address |= 0x608;
@@ -1670,24 +1699,24 @@ static int do_otp_prog(int addr, int nconfirm)
 	image_layout.strap = buf + OTP_REGION_OFFSET(otp_header->strap_info);
 
 	if (!strcmp("A0", (char *)otp_header->otp_version)) {
-		image_version = OTP_AST2600A0;
+		image_version = OTP_A0;
 		image_layout.strap_length = (int)(OTP_REGION_SIZE(otp_header->strap_info) / 3);
 		image_layout.strap_pro = image_layout.strap + image_layout.strap_length;
 		image_layout.strap_ignore = image_layout.strap + 2 * image_layout.strap_length;
 	} else if (!strcmp("A1", (char *)otp_header->otp_version)) {
-		image_version = OTP_AST2600A1;
+		image_version = OTP_A1;
 		image_layout.strap_length = (int)(OTP_REGION_SIZE(otp_header->strap_info) / 4);
 		image_layout.strap_reg_pro = image_layout.strap + image_layout.strap_length;
 		image_layout.strap_pro = image_layout.strap + 2 * image_layout.strap_length;
 		image_layout.strap_ignore = image_layout.strap + 3 * image_layout.strap_length;
 	} else if (!strcmp("A2", (char *)otp_header->otp_version)) {
-		image_version = OTP_AST2600A2;
+		image_version = OTP_A2;
 		image_layout.strap_length = (int)(OTP_REGION_SIZE(otp_header->strap_info) / 4);
 		image_layout.strap_reg_pro = image_layout.strap + image_layout.strap_length;
 		image_layout.strap_pro = image_layout.strap + 2 * image_layout.strap_length;
 		image_layout.strap_ignore = image_layout.strap + 3 * image_layout.strap_length;
 	} else if (!strcmp("A3", (char *)otp_header->otp_version)) {
-		image_version = OTP_AST2600A3;
+		image_version = OTP_A3;
 		image_layout.strap_length = (int)(OTP_REGION_SIZE(otp_header->strap_info) / 4);
 		image_layout.strap_reg_pro = image_layout.strap + image_layout.strap_length;
 		image_layout.strap_pro = image_layout.strap + 2 * image_layout.strap_length;
@@ -2200,6 +2229,7 @@ static int do_otprprotect(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv
 
 static int do_otpver(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 {
+	printf("SOC OTP version: %s\n", info_cb.ver_name);
 	printf("OTP tool version: %s\n", OTP_VER);
 	printf("OTP info version: %s\n", OTP_INFO_VER);
 
@@ -2293,41 +2323,45 @@ static int do_ast_otp(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 
 	ver = chip_version();
 	switch (ver) {
-	case OTP_AST2600A0:
-		info_cb.version = OTP_AST2600A0;
+	case OTP_A0:
+		info_cb.version = OTP_A0;
 		info_cb.conf_info = a0_conf_info;
 		info_cb.conf_info_len = ARRAY_SIZE(a0_conf_info);
 		info_cb.strap_info = a0_strap_info;
 		info_cb.strap_info_len = ARRAY_SIZE(a0_strap_info);
 		info_cb.key_info = a0_key_type;
 		info_cb.key_info_len = ARRAY_SIZE(a0_key_type);
+		sprintf(info_cb.ver_name, "A0");
 		break;
-	case OTP_AST2600A1:
-		info_cb.version = OTP_AST2600A1;
+	case OTP_A1:
+		info_cb.version = OTP_A1;
 		info_cb.conf_info = a1_conf_info;
 		info_cb.conf_info_len = ARRAY_SIZE(a1_conf_info);
 		info_cb.strap_info = a1_strap_info;
 		info_cb.strap_info_len = ARRAY_SIZE(a1_strap_info);
 		info_cb.key_info = a1_key_type;
 		info_cb.key_info_len = ARRAY_SIZE(a1_key_type);
+		sprintf(info_cb.ver_name, "A1");
 		break;
-	case OTP_AST2600A2:
-		info_cb.version = OTP_AST2600A2;
+	case OTP_A2:
+		info_cb.version = OTP_A2;
 		info_cb.conf_info = a2_conf_info;
 		info_cb.conf_info_len = ARRAY_SIZE(a2_conf_info);
 		info_cb.strap_info = a2_strap_info;
 		info_cb.strap_info_len = ARRAY_SIZE(a2_strap_info);
 		info_cb.key_info = a2_key_type;
 		info_cb.key_info_len = ARRAY_SIZE(a2_key_type);
+		sprintf(info_cb.ver_name, "A2");
 		break;
-	case OTP_AST2600A3:
-		info_cb.version = OTP_AST2600A3;
+	case OTP_A3:
+		info_cb.version = OTP_A3;
 		info_cb.conf_info = a2_conf_info;
 		info_cb.conf_info_len = ARRAY_SIZE(a2_conf_info);
 		info_cb.strap_info = a2_strap_info;
 		info_cb.strap_info_len = ARRAY_SIZE(a2_strap_info);
 		info_cb.key_info = a3_key_type;
 		info_cb.key_info_len = ARRAY_SIZE(a3_key_type);
+		sprintf(info_cb.ver_name, "A3");
 		break;
 	default:
 		printf("SOC is not supported\n");
