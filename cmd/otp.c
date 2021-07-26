@@ -20,7 +20,7 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-#define OTP_VER				"1.0.3"
+#define OTP_VER				"1.1.0"
 
 #define OTP_PASSWD			0x349fe38a
 #define RETRY				20
@@ -192,6 +192,20 @@ static const struct otpkey_type a3_key_type[] = {
 	{13, OTP_KEY_TYPE_RSA_PRIV,  0, "RSA-private as AES key decryption key(big endian)"},
 };
 
+static void buf_print(u8 *buf, int len)
+{
+	int i;
+
+	printf("      00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\n");
+	for (i = 0; i < len; i++) {
+		if (i % 16 == 0)
+			printf("%04X: ", i);
+		printf("%02X ", buf[i]);
+		if ((i + 1) % 16 == 0)
+			printf("\n");
+	}
+}
+
 static int get_dw_bit(u32 *rid, int offset)
 {
 	int bit_offset;
@@ -234,20 +248,6 @@ static int get_rid_num(u32 *rid)
 	return rid_num;
 }
 
-static void buf_print(u8 *buf, int len)
-{
-	int i;
-
-	printf("      00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\n");
-	for (i = 0; i < len; i++) {
-		if (i % 16 == 0)
-			printf("%04X: ", i);
-		printf("%02X ", buf[i]);
-		if ((i + 1) % 16 == 0)
-			printf("\n");
-	}
-}
-
 static u32 chip_version(void)
 {
 	u32 revid0, revid1;
@@ -286,7 +286,7 @@ static u32 chip_version(void)
 		/* AST2605-A3 */
 		return OTP_A3;
 	}
-	return -1;
+	return OTP_FAILURE;
 }
 
 static void wait_complete(void)
@@ -362,7 +362,7 @@ static void otp_read_data(u32 offset, u32 *data)
 	data[1] = readl(OTP_COMPARE_2);
 }
 
-static void otp_read_config(u32 offset, u32 *data)
+static void otp_read_conf(u32 offset, u32 *data)
 {
 	int config_offset;
 
@@ -374,41 +374,6 @@ static void otp_read_config(u32 offset, u32 *data)
 	writel(0x23b1e361, OTP_COMMAND); //trigger read
 	wait_complete();
 	data[0] = readl(OTP_COMPARE_1);
-}
-
-static int otp_print_config(u32 offset, int dw_count)
-{
-	int i;
-	u32 ret[1];
-
-	if (offset + dw_count > 32)
-		return OTP_USAGE;
-	otp_soak(0);
-	for (i = offset; i < offset + dw_count; i++) {
-		otp_read_config(i, ret);
-		printf("OTPCFG%X: %08X\n", i, ret[0]);
-	}
-	printf("\n");
-	return OTP_SUCCESS;
-}
-
-static int otp_print_data(u32 offset, int dw_count)
-{
-	int i;
-	u32 ret[2];
-
-	if (offset + dw_count > 2048 || offset % 4 != 0)
-		return OTP_USAGE;
-	otp_soak(0);
-	for (i = offset; i < offset + dw_count; i += 2) {
-		otp_read_data(i, ret);
-		if (i % 4 == 0)
-			printf("%03X: %08X %08X ", i * 4, ret[0], ret[1]);
-		else
-			printf("%08X %08X\n", ret[0], ret[1]);
-	}
-	printf("\n");
-	return OTP_SUCCESS;
 }
 
 static int otp_compare(u32 otp_addr, u32 addr)
@@ -430,9 +395,9 @@ static int otp_compare(u32 otp_addr, u32 addr)
 	wait_complete();
 	ret = readl(OTP_STATUS); //Compare command
 	if (ret & 0x1)
-		return 0;
+		return OTP_SUCCESS;
 	else
-		return -1;
+		return OTP_FAILURE;
 }
 
 static int verify_bit(u32 otp_addr, int bit_offset, int value)
@@ -451,14 +416,14 @@ static int verify_bit(u32 otp_addr, int bit_offset, int value)
 
 	if (otp_addr % 2 == 0) {
 		if (((ret[0] >> bit_offset) & 1) == value)
-			return 0;
+			return OTP_SUCCESS;
 		else
-			return -1;
+			return OTP_FAILURE;
 	} else {
 		if (((ret[1] >> bit_offset) & 1) == value)
-			return 0;
+			return OTP_SUCCESS;
 		else
-			return -1;
+			return OTP_FAILURE;
 	}
 }
 
@@ -481,19 +446,19 @@ static u32 verify_dw(u32 otp_addr, u32 *value, u32 *ignore, u32 *compare, int si
 			// printf("check %x : %x = %x\n", otp_addr, ret[0], value[0]);
 			if ((value[0] & ~ignore[0]) == (ret[0] & ~ignore[0])) {
 				compare[0] = 0;
-				return 0;
+				return OTP_SUCCESS;
 			}
 			compare[0] = value[0] ^ ret[0];
-			return -1;
+			return OTP_FAILURE;
 
 		} else {
 			// printf("check %x : %x = %x\n", otp_addr, ret[1], value[0]);
 			if ((value[0] & ~ignore[0]) == (ret[1] & ~ignore[0])) {
 				compare[0] = ~0;
-				return 0;
+				return OTP_SUCCESS;
 			}
 			compare[0] = ~(value[0] ^ ret[1]);
-			return -1;
+			return OTP_FAILURE;
 		}
 	} else if (size == 2) {
 		// otp_addr should be even
@@ -502,15 +467,15 @@ static u32 verify_dw(u32 otp_addr, u32 *value, u32 *ignore, u32 *compare, int si
 			// printf("check[1] %x : %x = %x\n", otp_addr, ret[1], value[1]);
 			compare[0] = 0;
 			compare[1] = ~0;
-			return 0;
+			return OTP_SUCCESS;
 		}
 		// printf("check[0] %x : %x = %x\n", otp_addr, ret[0], value[0]);
 		// printf("check[1] %x : %x = %x\n", otp_addr, ret[1], value[1]);
 		compare[0] = value[0] ^ ret[0];
 		compare[1] = ~(value[1] ^ ret[1]);
-		return -1;
+		return OTP_FAILURE;
 	} else {
-		return -1;
+		return OTP_FAILURE;
 	}
 }
 
@@ -543,7 +508,7 @@ static void _otp_prog_bit(u32 value, u32 prog_address, u32 bit_offset)
 	otp_prog(prog_address, prog_bit);
 }
 
-static int otp_prog_bit(u32 value, u32 prog_address, u32 bit_offset)
+static int otp_prog_dc_b(u32 value, u32 prog_address, u32 bit_offset)
 {
 	int pass;
 	int i;
@@ -613,7 +578,7 @@ static int otp_prog_verify_2dw(u32 *data, u32 *buf, u32 *ignore_mask, u32 prog_a
 	data1_masked = data[1]  & ~ignore_mask[1];
 	buf1_masked  = buf[1] & ~ignore_mask[1];
 	if (data0_masked == buf0_masked && data1_masked == buf1_masked)
-		return 0;
+		return OTP_SUCCESS;
 
 	otp_soak(1);
 	if (data0_masked != buf0_masked)
@@ -677,8 +642,8 @@ static void otp_strap_status(struct otpstrap_status *otpstrap)
 	for (i = 16; i < strap_end; i += 2) {
 		int option = (i - 16) / 2;
 
-		otp_read_config(i, &OTPSTRAP_RAW[0]);
-		otp_read_config(i + 1, &OTPSTRAP_RAW[1]);
+		otp_read_conf(i, &OTPSTRAP_RAW[0]);
+		otp_read_conf(i + 1, &OTPSTRAP_RAW[1]);
 		for (j = 0; j < 32; j++) {
 			char bit_value = ((OTPSTRAP_RAW[0] >> j) & 0x1);
 
@@ -702,8 +667,8 @@ static void otp_strap_status(struct otpstrap_status *otpstrap)
 	}
 
 	if (info_cb.version != OTP_A0) {
-		otp_read_config(28, &OTPSTRAP_RAW[0]);
-		otp_read_config(29, &OTPSTRAP_RAW[1]);
+		otp_read_conf(28, &OTPSTRAP_RAW[0]);
+		otp_read_conf(29, &OTPSTRAP_RAW[1]);
 		for (j = 0; j < 32; j++) {
 			if (((OTPSTRAP_RAW[0] >> j) & 0x1) == 1)
 				otpstrap[j].reg_protected = 1;
@@ -714,8 +679,8 @@ static void otp_strap_status(struct otpstrap_status *otpstrap)
 		}
 	}
 
-	otp_read_config(30, &OTPSTRAP_RAW[0]);
-	otp_read_config(31, &OTPSTRAP_RAW[1]);
+	otp_read_conf(30, &OTPSTRAP_RAW[0]);
+	otp_read_conf(31, &OTPSTRAP_RAW[1]);
 	for (j = 0; j < 32; j++) {
 		if (((OTPSTRAP_RAW[0] >> j) & 0x1) == 1)
 			otpstrap[j].protected = 1;
@@ -724,6 +689,152 @@ static void otp_strap_status(struct otpstrap_status *otpstrap)
 		if (((OTPSTRAP_RAW[1] >> (j - 32)) & 0x1) == 1)
 			otpstrap[j].protected = 1;
 	}
+}
+
+static int otp_strap_bit_confirm(struct otpstrap_status *otpstrap, int offset, int ibit, int bit, int pbit, int rpbit)
+{
+	int prog_flag = 0;
+
+	// ignore this bit
+	if (ibit == 1)
+		return OTP_SUCCESS;
+	printf("OTPSTRAP[%X]:\n", offset);
+
+	if (bit == otpstrap->value) {
+		if (!pbit && !rpbit) {
+			printf("    The value is same as before, skip it.\n");
+			return OTP_PROG_SKIP;
+		}
+		printf("    The value is same as before.\n");
+	} else {
+		prog_flag = 1;
+	}
+	if (otpstrap->protected == 1 && prog_flag) {
+		printf("    This bit is protected and is not writable\n");
+		return OTP_FAILURE;
+	}
+	if (otpstrap->remain_times == 0 && prog_flag) {
+		printf("    This bit is no remaining times to write.\n");
+		return OTP_FAILURE;
+	}
+	if (pbit == 1)
+		printf("    This bit will be protected and become non-writable.\n");
+	if (rpbit == 1 && info_cb.version != OTP_A0)
+		printf("    The relative register will be protected.\n");
+	if (prog_flag)
+		printf("    Write 1 to OTPSTRAP[%X] OPTION[%X], that value becomes from %d to %d.\n", offset, otpstrap->writeable_option + 1, otpstrap->value, otpstrap->value ^ 1);
+
+	return OTP_SUCCESS;
+}
+
+static int otp_prog_strap_b(int bit_offset, int value)
+{
+	struct otpstrap_status otpstrap[64];
+	u32 prog_address;
+	int offset;
+	int ret;
+
+	otp_strap_status(otpstrap);
+
+	ret = otp_strap_bit_confirm(&otpstrap[bit_offset], bit_offset, 0, value, 0, 0);
+
+	if (ret != OTP_SUCCESS)
+		return ret;
+
+	prog_address = 0x800;
+	if (bit_offset < 32) {
+		offset = bit_offset;
+		prog_address |= ((otpstrap[bit_offset].writeable_option * 2 + 16) / 8) * 0x200;
+		prog_address |= ((otpstrap[bit_offset].writeable_option * 2 + 16) % 8) * 0x2;
+
+	} else {
+		offset = (bit_offset - 32);
+		prog_address |= ((otpstrap[bit_offset].writeable_option * 2 + 17) / 8) * 0x200;
+		prog_address |= ((otpstrap[bit_offset].writeable_option * 2 + 17) % 8) * 0x2;
+	}
+
+	return otp_prog_dc_b(1, prog_address, offset);
+}
+
+static int otp_print_conf(u32 offset, int dw_count)
+{
+	int i;
+	u32 ret[1];
+
+	if (offset + dw_count > 32)
+		return OTP_USAGE;
+	otp_soak(0);
+	for (i = offset; i < offset + dw_count; i++) {
+		otp_read_conf(i, ret);
+		printf("OTPCFG%X: %08X\n", i, ret[0]);
+	}
+	printf("\n");
+	return OTP_SUCCESS;
+}
+
+static int otp_print_data(u32 offset, int dw_count)
+{
+	int i;
+	u32 ret[2];
+
+	if (offset + dw_count > 2048 || offset % 4 != 0)
+		return OTP_USAGE;
+	otp_soak(0);
+	for (i = offset; i < offset + dw_count; i += 2) {
+		otp_read_data(i, ret);
+		if (i % 4 == 0)
+			printf("%03X: %08X %08X ", i * 4, ret[0], ret[1]);
+		else
+			printf("%08X %08X\n", ret[0], ret[1]);
+	}
+	printf("\n");
+	return OTP_SUCCESS;
+}
+
+static int otp_print_strap(int start, int count)
+{
+	int i, j;
+	int remains;
+	struct otpstrap_status otpstrap[64];
+
+	if (start < 0 || start > 64)
+		return OTP_USAGE;
+
+	if ((start + count) < 0 || (start + count) > 64)
+		return OTP_USAGE;
+
+	otp_strap_status(otpstrap);
+
+	if (info_cb.version == OTP_A0) {
+		remains = 7;
+		printf("BIT(hex)  Value  Option           Status\n");
+	} else {
+		remains = 6;
+		printf("BIT(hex)  Value  Option         Reg_Protect Status\n");
+	}
+	printf("______________________________________________________________________________\n");
+
+	for (i = start; i < start + count; i++) {
+		printf("0x%-8X", i);
+		printf("%-7d", otpstrap[i].value);
+		for (j = 0; j < remains; j++)
+			printf("%d ", otpstrap[i].option_array[j]);
+		printf("   ");
+		if (info_cb.version != OTP_A0)
+			printf("%d           ", otpstrap[i].reg_protected);
+		if (otpstrap[i].protected == 1) {
+			printf("protected and not writable");
+		} else {
+			printf("not protected ");
+			if (otpstrap[i].remain_times == 0)
+				printf("and no remaining times to write.");
+			else
+				printf("and still can write %d times", otpstrap[i].remain_times);
+		}
+		printf("\n");
+	}
+
+	return OTP_SUCCESS;
 }
 
 static void otp_print_revid(u32 *rid)
@@ -872,7 +983,7 @@ static int otp_print_conf_info(int input_offset)
 
 	otp_soak(0);
 	for (i = 0; i < 16; i++)
-		otp_read_config(i, &OTPCFG[i]);
+		otp_read_conf(i, &OTPCFG[i]);
 
 	printf("DW    BIT        Value       Description\n");
 	printf("__________________________________________________________________________\n");
@@ -1093,7 +1204,7 @@ static int otp_print_strap_info(int view)
 	return OTP_SUCCESS;
 }
 
-static int otp_print_data_info(struct otp_image_layout *image_layout)
+static int otp_print_data_image(struct otp_image_layout *image_layout)
 {
 	int key_id, key_offset, last, key_type, key_length, exp_length;
 	const struct otpkey_type *key_info_array = info_cb.key_info;
@@ -1112,7 +1223,7 @@ static int otp_print_data_info(struct otp_image_layout *image_layout)
 			empty = 0;
 	}
 	if (empty)
-		return 0;
+		return OTP_SUCCESS;
 
 	i = 0;
 	while (1) {
@@ -1213,7 +1324,237 @@ static int otp_print_data_info(struct otp_image_layout *image_layout)
 			break;
 		i++;
 	}
-	return 0;
+	return OTP_SUCCESS;
+}
+
+static int otp_strap_image_confirm(struct otp_image_layout *image_layout)
+{
+	int i;
+	u32 *strap;
+	u32 *strap_ignore;
+	u32 *strap_reg_protect;
+	u32 *strap_pro;
+	int bit, pbit, ibit, rpbit;
+	int fail = 0;
+	int ret;
+	struct otpstrap_status otpstrap[64];
+
+	strap = (u32 *)image_layout->strap;
+	strap_pro = (u32 *)image_layout->strap_pro;
+	strap_ignore = (u32 *)image_layout->strap_ignore;
+	strap_reg_protect = (u32 *)image_layout->strap_reg_pro;
+
+	otp_strap_status(otpstrap);
+	for (i = 0; i < 64; i++) {
+		if (i < 32) {
+			bit = (strap[0] >> i) & 0x1;
+			ibit = (strap_ignore[0] >> i) & 0x1;
+			pbit = (strap_pro[0] >> i) & 0x1;
+		} else {
+			bit = (strap[1] >> (i - 32)) & 0x1;
+			ibit = (strap_ignore[1] >> (i - 32)) & 0x1;
+			pbit = (strap_pro[1] >> (i - 32)) & 0x1;
+		}
+
+		if (info_cb.version != OTP_A0) {
+			if (i < 32)
+				rpbit = (strap_reg_protect[0] >> i) & 0x1;
+			else
+				rpbit = (strap_reg_protect[1] >> (i - 32)) & 0x1;
+		} else {
+			rpbit = 0;
+		}
+		ret = otp_strap_bit_confirm(&otpstrap[i], i, ibit, bit, pbit, rpbit);
+
+		if (ret == OTP_FAILURE)
+			fail = 1;
+	}
+	if (fail == 1)
+		return OTP_FAILURE;
+	else
+		return OTP_SUCCESS;
+}
+
+static int otp_prog_data(struct otp_image_layout *image_layout)
+{
+	int i;
+	int ret;
+	int data_dw;
+	u32 data[2048];
+	u32 *buf;
+	u32 *buf_ignore;
+	u32 data_masked;
+	u32 buf_masked;
+
+	buf = (u32 *)image_layout->data;
+	buf_ignore = (u32 *)image_layout->data_ignore;
+
+	data_dw = image_layout->data_length / 4;
+
+	printf("Read OTP Data:\n");
+
+	for (i = 0; i < data_dw - 2 ; i += 2)
+		otp_read_data(i, &data[i]);
+
+	printf("Check writable...\n");
+	// ignore last two dw, the last two dw is used for slt otp write check.
+	for (i = 0; i < data_dw - 2; i++) {
+		data_masked = data[i]  & ~buf_ignore[i];
+		buf_masked  = buf[i] & ~buf_ignore[i];
+		if (data_masked == buf_masked)
+			continue;
+		if (i % 2 == 0) {
+			if ((data_masked | buf_masked) == buf_masked) {
+				continue;
+			} else {
+				printf("Input image can't program into OTP, please check.\n");
+				printf("OTP_ADDR[%x] = %x\n", i, data[i]);
+				printf("Input   [%x] = %x\n", i, buf[i]);
+				printf("Mask    [%x] = %x\n", i, ~buf_ignore[i]);
+				return OTP_FAILURE;
+			}
+		} else {
+			if ((data_masked & buf_masked) == buf_masked) {
+				continue;
+			} else {
+				printf("Input image can't program into OTP, please check.\n");
+				printf("OTP_ADDR[%x] = %x\n", i, data[i]);
+				printf("Input   [%x] = %x\n", i, buf[i]);
+				printf("Mask    [%x] = %x\n", i, ~buf_ignore[i]);
+				return OTP_FAILURE;
+			}
+		}
+	}
+
+	printf("Start Programing...\n");
+
+	// programing ecc region first
+	for (i = 1792; i < 2046; i += 2) {
+		ret = otp_prog_verify_2dw(&data[i], &buf[i], &buf_ignore[i], i);
+		if (ret != OTP_SUCCESS) {
+			printf("address: %08x, data: %08x %08x, buffer: %08x %08x, mask: %08x %08x\n",
+			       i, data[i], data[i + 1], buf[i], buf[i + 1], buf_ignore[i], buf_ignore[i + 1]);
+			return ret;
+		}
+	}
+
+	for (i = 0; i < 1792; i += 2) {
+		ret = otp_prog_verify_2dw(&data[i], &buf[i], &buf_ignore[i], i);
+		if (ret != OTP_SUCCESS) {
+			printf("address: %08x, data: %08x %08x, buffer: %08x %08x, mask: %08x %08x\n",
+			       i, data[i], data[i + 1], buf[i], buf[i + 1], buf_ignore[i], buf_ignore[i + 1]);
+			return ret;
+		}
+	}
+	otp_soak(0);
+	return OTP_SUCCESS;
+}
+
+static int otp_prog_strap(struct otp_image_layout *image_layout)
+{
+	u32 *strap;
+	u32 *strap_ignore;
+	u32 *strap_pro;
+	u32 *strap_reg_protect;
+	u32 prog_address;
+	int i;
+	int bit, pbit, ibit, offset, rpbit;
+	int fail = 0;
+	int ret;
+	int prog_flag = 0;
+	struct otpstrap_status otpstrap[64];
+
+	strap = (u32 *)image_layout->strap;
+	strap_pro = (u32 *)image_layout->strap_pro;
+	strap_ignore = (u32 *)image_layout->strap_ignore;
+	strap_reg_protect = (u32 *)image_layout->strap_reg_pro;
+
+	printf("Read OTP Strap Region:\n");
+	otp_strap_status(otpstrap);
+
+	printf("Check writable...\n");
+	if (otp_strap_image_confirm(image_layout) == OTP_FAILURE) {
+		printf("Input image can't program into OTP, please check.\n");
+		return OTP_FAILURE;
+	}
+
+	for (i = 0; i < 64; i++) {
+		prog_address = 0x800;
+		if (i < 32) {
+			offset = i;
+			bit = (strap[0] >> offset) & 0x1;
+			ibit = (strap_ignore[0] >> offset) & 0x1;
+			pbit = (strap_pro[0] >> offset) & 0x1;
+			prog_address |= ((otpstrap[i].writeable_option * 2 + 16) / 8) * 0x200;
+			prog_address |= ((otpstrap[i].writeable_option * 2 + 16) % 8) * 0x2;
+
+		} else {
+			offset = (i - 32);
+			bit = (strap[1] >> offset) & 0x1;
+			ibit = (strap_ignore[1] >> offset) & 0x1;
+			pbit = (strap_pro[1] >> offset) & 0x1;
+			prog_address |= ((otpstrap[i].writeable_option * 2 + 17) / 8) * 0x200;
+			prog_address |= ((otpstrap[i].writeable_option * 2 + 17) % 8) * 0x2;
+		}
+		if (info_cb.version != OTP_A0) {
+			if (i < 32)
+				rpbit = (strap_reg_protect[0] >> i) & 0x1;
+			else
+				rpbit = (strap_reg_protect[1] >> (i - 32)) & 0x1;
+		} else {
+			rpbit = 0;
+		}
+
+		if (ibit == 1)
+			continue;
+		if (bit == otpstrap[i].value)
+			prog_flag = 0;
+		else
+			prog_flag = 1;
+
+		if (otpstrap[i].protected == 1 && prog_flag) {
+			fail = 1;
+			continue;
+		}
+		if (otpstrap[i].remain_times == 0 && prog_flag) {
+			fail = 1;
+			continue;
+		}
+
+		if (prog_flag) {
+			ret = otp_prog_dc_b(1, prog_address, offset);
+			if (ret)
+				return OTP_FAILURE;
+		}
+
+		if (rpbit == 1 && info_cb.version != OTP_A0) {
+			prog_address = 0x800;
+			if (i < 32)
+				prog_address |= 0x608;
+			else
+				prog_address |= 0x60a;
+
+			ret = otp_prog_dc_b(1, prog_address, offset);
+			if (ret)
+				return OTP_FAILURE;
+		}
+
+		if (pbit != 0) {
+			prog_address = 0x800;
+			if (i < 32)
+				prog_address |= 0x60c;
+			else
+				prog_address |= 0x60e;
+
+			ret = otp_prog_dc_b(1, prog_address, offset);
+			if (ret)
+				return OTP_FAILURE;
+		}
+	}
+	otp_soak(0);
+	if (fail == 1)
+		return OTP_FAILURE;
+	return OTP_SUCCESS;
 }
 
 static int otp_prog_conf(struct otp_image_layout *image_layout)
@@ -1300,348 +1641,7 @@ static int otp_prog_conf(struct otp_image_layout *image_layout)
 	return OTP_SUCCESS;
 }
 
-static int otp_strap_bit_confirm(struct otpstrap_status *otpstrap, int offset, int ibit, int bit, int pbit, int rpbit)
-{
-	int prog_flag = 0;
-
-	// ignore this bit
-	if (ibit == 1)
-		return OTP_SUCCESS;
-	printf("OTPSTRAP[%X]:\n", offset);
-
-	if (bit == otpstrap->value) {
-		if (!pbit && !rpbit) {
-			printf("    The value is same as before, skip it.\n");
-			return OTP_PROG_SKIP;
-		}
-		printf("    The value is same as before.\n");
-	} else {
-		prog_flag = 1;
-	}
-	if (otpstrap->protected == 1 && prog_flag) {
-		printf("    This bit is protected and is not writable\n");
-		return OTP_FAILURE;
-	}
-	if (otpstrap->remain_times == 0 && prog_flag) {
-		printf("    This bit is no remaining times to write.\n");
-		return OTP_FAILURE;
-	}
-	if (pbit == 1)
-		printf("    This bit will be protected and become non-writable.\n");
-	if (rpbit == 1 && info_cb.version != OTP_A0)
-		printf("    The relative register will be protected.\n");
-	if (prog_flag)
-		printf("    Write 1 to OTPSTRAP[%X] OPTION[%X], that value becomes from %d to %d.\n", offset, otpstrap->writeable_option + 1, otpstrap->value, otpstrap->value ^ 1);
-
-	return OTP_SUCCESS;
-}
-
-static int otp_strap_image_confirm(struct otp_image_layout *image_layout)
-{
-	int i;
-	u32 *strap;
-	u32 *strap_ignore;
-	u32 *strap_reg_protect;
-	u32 *strap_pro;
-	int bit, pbit, ibit, rpbit;
-	int fail = 0;
-	int ret;
-	struct otpstrap_status otpstrap[64];
-
-	strap = (u32 *)image_layout->strap;
-	strap_pro = (u32 *)image_layout->strap_pro;
-	strap_ignore = (u32 *)image_layout->strap_ignore;
-	strap_reg_protect = (u32 *)image_layout->strap_reg_pro;
-
-	otp_strap_status(otpstrap);
-	for (i = 0; i < 64; i++) {
-		if (i < 32) {
-			bit = (strap[0] >> i) & 0x1;
-			ibit = (strap_ignore[0] >> i) & 0x1;
-			pbit = (strap_pro[0] >> i) & 0x1;
-		} else {
-			bit = (strap[1] >> (i - 32)) & 0x1;
-			ibit = (strap_ignore[1] >> (i - 32)) & 0x1;
-			pbit = (strap_pro[1] >> (i - 32)) & 0x1;
-		}
-
-		if (info_cb.version != OTP_A0) {
-			if (i < 32)
-				rpbit = (strap_reg_protect[0] >> i) & 0x1;
-			else
-				rpbit = (strap_reg_protect[1] >> (i - 32)) & 0x1;
-		} else {
-			rpbit = 0;
-		}
-		ret = otp_strap_bit_confirm(&otpstrap[i], i, ibit, bit, pbit, rpbit);
-
-		if (ret == OTP_FAILURE)
-			fail = 1;
-	}
-	if (fail == 1)
-		return OTP_FAILURE;
-	else
-		return OTP_SUCCESS;
-}
-
-static int otp_print_strap(int start, int count)
-{
-	int i, j;
-	int remains;
-	struct otpstrap_status otpstrap[64];
-
-	if (start < 0 || start > 64)
-		return OTP_USAGE;
-
-	if ((start + count) < 0 || (start + count) > 64)
-		return OTP_USAGE;
-
-	otp_strap_status(otpstrap);
-
-	if (info_cb.version == OTP_A0) {
-		remains = 7;
-		printf("BIT(hex)  Value  Option           Status\n");
-	} else {
-		remains = 6;
-		printf("BIT(hex)  Value  Option         Reg_Protect Status\n");
-	}
-	printf("______________________________________________________________________________\n");
-
-	for (i = start; i < start + count; i++) {
-		printf("0x%-8X", i);
-		printf("%-7d", otpstrap[i].value);
-		for (j = 0; j < remains; j++)
-			printf("%d ", otpstrap[i].option_array[j]);
-		printf("   ");
-		if (info_cb.version != OTP_A0)
-			printf("%d           ", otpstrap[i].reg_protected);
-		if (otpstrap[i].protected == 1) {
-			printf("protected and not writable");
-		} else {
-			printf("not protected ");
-			if (otpstrap[i].remain_times == 0)
-				printf("and no remaining times to write.");
-			else
-				printf("and still can write %d times", otpstrap[i].remain_times);
-		}
-		printf("\n");
-	}
-
-	return OTP_SUCCESS;
-}
-
-static int otp_prog_strap_bit(int bit_offset, int value)
-{
-	struct otpstrap_status otpstrap[64];
-	u32 prog_address;
-	int offset;
-	int ret;
-
-	otp_strap_status(otpstrap);
-
-	ret = otp_strap_bit_confirm(&otpstrap[bit_offset], bit_offset, 0, value, 0, 0);
-
-	if (ret != OTP_SUCCESS)
-		return ret;
-
-	prog_address = 0x800;
-	if (bit_offset < 32) {
-		offset = bit_offset;
-		prog_address |= ((otpstrap[bit_offset].writeable_option * 2 + 16) / 8) * 0x200;
-		prog_address |= ((otpstrap[bit_offset].writeable_option * 2 + 16) % 8) * 0x2;
-
-	} else {
-		offset = (bit_offset - 32);
-		prog_address |= ((otpstrap[bit_offset].writeable_option * 2 + 17) / 8) * 0x200;
-		prog_address |= ((otpstrap[bit_offset].writeable_option * 2 + 17) % 8) * 0x2;
-	}
-
-	return otp_prog_bit(1, prog_address, offset);
-}
-
-static int otp_prog_strap(struct otp_image_layout *image_layout)
-{
-	u32 *strap;
-	u32 *strap_ignore;
-	u32 *strap_pro;
-	u32 *strap_reg_protect;
-	u32 prog_address;
-	int i;
-	int bit, pbit, ibit, offset, rpbit;
-	int fail = 0;
-	int ret;
-	int prog_flag = 0;
-	struct otpstrap_status otpstrap[64];
-
-	strap = (u32 *)image_layout->strap;
-	strap_pro = (u32 *)image_layout->strap_pro;
-	strap_ignore = (u32 *)image_layout->strap_ignore;
-	strap_reg_protect = (u32 *)image_layout->strap_reg_pro;
-
-	printf("Read OTP Strap Region:\n");
-	otp_strap_status(otpstrap);
-
-	printf("Check writable...\n");
-	if (otp_strap_image_confirm(image_layout) == OTP_FAILURE) {
-		printf("Input image can't program into OTP, please check.\n");
-		return OTP_FAILURE;
-	}
-
-	for (i = 0; i < 64; i++) {
-		prog_address = 0x800;
-		if (i < 32) {
-			offset = i;
-			bit = (strap[0] >> offset) & 0x1;
-			ibit = (strap_ignore[0] >> offset) & 0x1;
-			pbit = (strap_pro[0] >> offset) & 0x1;
-			prog_address |= ((otpstrap[i].writeable_option * 2 + 16) / 8) * 0x200;
-			prog_address |= ((otpstrap[i].writeable_option * 2 + 16) % 8) * 0x2;
-
-		} else {
-			offset = (i - 32);
-			bit = (strap[1] >> offset) & 0x1;
-			ibit = (strap_ignore[1] >> offset) & 0x1;
-			pbit = (strap_pro[1] >> offset) & 0x1;
-			prog_address |= ((otpstrap[i].writeable_option * 2 + 17) / 8) * 0x200;
-			prog_address |= ((otpstrap[i].writeable_option * 2 + 17) % 8) * 0x2;
-		}
-		if (info_cb.version != OTP_A0) {
-			if (i < 32)
-				rpbit = (strap_reg_protect[0] >> i) & 0x1;
-			else
-				rpbit = (strap_reg_protect[1] >> (i - 32)) & 0x1;
-		} else {
-			rpbit = 0;
-		}
-
-		if (ibit == 1)
-			continue;
-		if (bit == otpstrap[i].value)
-			prog_flag = 0;
-		else
-			prog_flag = 1;
-
-		if (otpstrap[i].protected == 1 && prog_flag) {
-			fail = 1;
-			continue;
-		}
-		if (otpstrap[i].remain_times == 0 && prog_flag) {
-			fail = 1;
-			continue;
-		}
-
-		if (prog_flag) {
-			ret = otp_prog_bit(1, prog_address, offset);
-			if (ret)
-				return OTP_FAILURE;
-		}
-
-		if (rpbit == 1 && info_cb.version != OTP_A0) {
-			prog_address = 0x800;
-			if (i < 32)
-				prog_address |= 0x608;
-			else
-				prog_address |= 0x60a;
-
-			ret = otp_prog_bit(1, prog_address, offset);
-			if (ret)
-				return OTP_FAILURE;
-		}
-
-		if (pbit != 0) {
-			prog_address = 0x800;
-			if (i < 32)
-				prog_address |= 0x60c;
-			else
-				prog_address |= 0x60e;
-
-			ret = otp_prog_bit(1, prog_address, offset);
-			if (ret)
-				return OTP_FAILURE;
-		}
-	}
-	otp_soak(0);
-	if (fail == 1)
-		return OTP_FAILURE;
-	return OTP_SUCCESS;
-}
-
-static int otp_prog_data(struct otp_image_layout *image_layout)
-{
-	int i;
-	int ret;
-	int data_dw;
-	u32 data[2048];
-	u32 *buf;
-	u32 *buf_ignore;
-	u32 data_masked;
-	u32 buf_masked;
-
-	buf = (u32 *)image_layout->data;
-	buf_ignore = (u32 *)image_layout->data_ignore;
-
-	data_dw = image_layout->data_length / 4;
-
-	printf("Read OTP Data:\n");
-
-	for (i = 0; i < data_dw - 2 ; i += 2)
-		otp_read_data(i, &data[i]);
-
-	printf("Check writable...\n");
-	// ignore last two dw, the last two dw is used for slt otp write check.
-	for (i = 0; i < data_dw - 2; i++) {
-		data_masked = data[i]  & ~buf_ignore[i];
-		buf_masked  = buf[i] & ~buf_ignore[i];
-		if (data_masked == buf_masked)
-			continue;
-		if (i % 2 == 0) {
-			if ((data_masked | buf_masked) == buf_masked) {
-				continue;
-			} else {
-				printf("Input image can't program into OTP, please check.\n");
-				printf("OTP_ADDR[%x] = %x\n", i, data[i]);
-				printf("Input   [%x] = %x\n", i, buf[i]);
-				printf("Mask    [%x] = %x\n", i, ~buf_ignore[i]);
-				return OTP_FAILURE;
-			}
-		} else {
-			if ((data_masked & buf_masked) == buf_masked) {
-				continue;
-			} else {
-				printf("Input image can't program into OTP, please check.\n");
-				printf("OTP_ADDR[%x] = %x\n", i, data[i]);
-				printf("Input   [%x] = %x\n", i, buf[i]);
-				printf("Mask    [%x] = %x\n", i, ~buf_ignore[i]);
-				return OTP_FAILURE;
-			}
-		}
-	}
-
-	printf("Start Programing...\n");
-
-	// programing ecc region first
-	for (i = 1792; i < 2046; i += 2) {
-		ret = otp_prog_verify_2dw(&data[i], &buf[i], &buf_ignore[i], i);
-		if (ret != OTP_SUCCESS) {
-			printf("address: %08x, data: %08x %08x, buffer: %08x %08x, mask: %08x %08x\n",
-			       i, data[i], data[i + 1], buf[i], buf[i + 1], buf_ignore[i], buf_ignore[i + 1]);
-			return ret;
-		}
-	}
-
-	for (i = 0; i < 1792; i += 2) {
-		ret = otp_prog_verify_2dw(&data[i], &buf[i], &buf_ignore[i], i);
-		if (ret != OTP_SUCCESS) {
-			printf("address: %08x, data: %08x %08x, buffer: %08x %08x, mask: %08x %08x\n",
-			       i, data[i], data[i + 1], buf[i], buf[i + 1], buf_ignore[i], buf_ignore[i + 1]);
-			return ret;
-		}
-	}
-	otp_soak(0);
-	return OTP_SUCCESS;
-}
-
-static int otp_image_verify(u8 *src_buf, u32 length, u8 *digest_buf)
+static int otp_verify_image(u8 *src_buf, u32 length, u8 *digest_buf)
 {
 	sha256_context ctx;
 	u8 digest_ret[CHECKSUM_LEN];
@@ -1651,11 +1651,11 @@ static int otp_image_verify(u8 *src_buf, u32 length, u8 *digest_buf)
 	sha256_finish(&ctx, digest_ret);
 
 	if (!memcmp(digest_buf, digest_ret, CHECKSUM_LEN))
-		return 0;
-	return -1;
+		return OTP_SUCCESS;
+	return OTP_FAILURE;
 }
 
-static int do_otp_prog(int addr, int nconfirm)
+static int otp_prog_image(int addr, int nconfirm)
 {
 	int ret;
 	int image_version = 0;
@@ -1731,7 +1731,7 @@ static int do_otp_prog(int addr, int nconfirm)
 		return OTP_FAILURE;
 	}
 
-	if (otp_image_verify(buf, image_size, checksum)) {
+	if (otp_verify_image(buf, image_size, checksum)) {
 		puts("checksum is invalid\n");
 		return OTP_FAILURE;
 	}
@@ -1739,7 +1739,7 @@ static int do_otp_prog(int addr, int nconfirm)
 	if (!nconfirm) {
 		if (otp_header->image_info & OTP_INC_DATA) {
 			printf("\nOTP data region :\n");
-			if (otp_print_data_info(&image_layout) < 0) {
+			if (otp_print_data_image(&image_layout) < 0) {
 				printf("OTP data error, please check.\n");
 				return OTP_FAILURE;
 			}
@@ -1797,7 +1797,7 @@ static int do_otp_prog(int addr, int nconfirm)
 	return OTP_SUCCESS;
 }
 
-static int do_otp_prog_bit(int mode, int otp_dw_offset, int bit_offset, int value, int nconfirm)
+static int otp_prog_bit(int mode, int otp_dw_offset, int bit_offset, int value, int nconfirm)
 {
 	u32 read[2];
 	u32 prog_address = 0;
@@ -1808,7 +1808,7 @@ static int do_otp_prog_bit(int mode, int otp_dw_offset, int bit_offset, int valu
 	otp_soak(0);
 	switch (mode) {
 	case OTP_REGION_CONF:
-		otp_read_config(otp_dw_offset, read);
+		otp_read_conf(otp_dw_offset, read);
 		prog_address = 0x800;
 		prog_address |= (otp_dw_offset / 8) * 0x200;
 		prog_address |= (otp_dw_offset % 8) * 0x2;
@@ -1877,11 +1877,11 @@ static int do_otp_prog_bit(int mode, int otp_dw_offset, int bit_offset, int valu
 
 	switch (mode) {
 	case OTP_REGION_STRAP:
-		ret =  otp_prog_strap_bit(bit_offset, value);
+		ret =  otp_prog_strap_b(bit_offset, value);
 		break;
 	case OTP_REGION_CONF:
 	case OTP_REGION_DATA:
-		ret = otp_prog_bit(value, prog_address, bit_offset);
+		ret = otp_prog_dc_b(value, prog_address, bit_offset);
 		break;
 	}
 	otp_soak(0);
@@ -1904,8 +1904,8 @@ static int otp_update_rid(u32 update_num, int force)
 	int i;
 	int ret;
 
-	otp_read_config(10, &otp_rid[0]);
-	otp_read_config(11, &otp_rid[1]);
+	otp_read_conf(10, &otp_rid[0]);
+	otp_read_conf(11, &otp_rid[1]);
 
 	rid_num = get_rid_num(otp_rid);
 
@@ -1957,15 +1957,15 @@ static int otp_update_rid(u32 update_num, int force)
 			dw_offset = 0xa06;
 			bit_offset = i - 32;
 		}
-		if (otp_prog_bit(1, dw_offset, bit_offset)) {
+		if (otp_prog_dc_b(1, dw_offset, bit_offset)) {
 			printf("OTPCFG%X[%d] programming failed\n", dw_offset, bit_offset);
 			ret = OTP_FAILURE;
 			break;
 		}
 	}
 
-	otp_read_config(10, &otp_rid[0]);
-	otp_read_config(11, &otp_rid[1]);
+	otp_read_conf(10, &otp_rid[0]);
+	otp_read_conf(11, &otp_rid[1]);
 	rid_num = get_rid_num(otp_rid);
 	if (rid_num >= 0)
 		printf("OTP revision ID: 0x%x\n", rid_num);
@@ -1996,7 +1996,7 @@ static int do_otpread(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 
 	if (!strcmp(argv[1], "conf")) {
 		writel(OTP_PASSWD, OTP_PROTECT_KEY); //password
-		ret = otp_print_config(offset, count);
+		ret = otp_print_conf(offset, count);
 	} else if (!strcmp(argv[1], "data")) {
 		writel(OTP_PASSWD, OTP_PROTECT_KEY); //password
 		ret = otp_print_data(offset, count);
@@ -2022,11 +2022,11 @@ static int do_otpprog(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 			return CMD_RET_USAGE;
 		addr = simple_strtoul(argv[2], NULL, 16);
 		writel(OTP_PASSWD, OTP_PROTECT_KEY); //password
-		ret = do_otp_prog(addr, 1);
+		ret = otp_prog_image(addr, 1);
 	} else if (argc == 2) {
 		addr = simple_strtoul(argv[1], NULL, 16);
 		writel(OTP_PASSWD, OTP_PROTECT_KEY); //password
-		ret = do_otp_prog(addr, 0);
+		ret = otp_prog_image(addr, 0);
 	} else {
 		return CMD_RET_USAGE;
 	}
@@ -2098,7 +2098,7 @@ static int do_otppb(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 		return CMD_RET_USAGE;
 
 	writel(OTP_PASSWD, OTP_PROTECT_KEY); //password
-	ret = do_otp_prog_bit(mode, otp_addr, bit_offset, value, nconfirm);
+	ret = otp_prog_bit(mode, otp_addr, bit_offset, value, nconfirm);
 
 	if (ret == OTP_SUCCESS)
 		return CMD_RET_SUCCESS;
@@ -2205,7 +2205,7 @@ static int _do_otpprotect(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv
 		return CMD_RET_SUCCESS;
 	}
 
-	ret = otp_prog_bit(1, prog_address, bit_offset);
+	ret = otp_prog_dc_b(1, prog_address, bit_offset);
 	otp_soak(0);
 
 	if (ret) {
@@ -2272,8 +2272,8 @@ static int do_otprid(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 		return CMD_RET_USAGE;
 
 	writel(OTP_PASSWD, OTP_PROTECT_KEY); //password
-	otp_read_config(10, &otp_rid[0]);
-	otp_read_config(11, &otp_rid[1]);
+	otp_read_conf(10, &otp_rid[0]);
+	otp_read_conf(11, &otp_rid[1]);
 
 	rid_num = get_rid_num(otp_rid);
 
