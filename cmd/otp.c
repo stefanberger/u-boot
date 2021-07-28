@@ -53,6 +53,8 @@ DECLARE_GLOBAL_DATA_PTR;
 #define OTP_COMPARE_2		OTP_BASE + 0x24
 #define OTP_COMPARE_3		OTP_BASE + 0x28
 #define OTP_COMPARE_4		OTP_BASE + 0x2c
+#define SW_REV_ID0		OTP_BASE + 0x68
+#define SW_REV_ID1		OTP_BASE + 0x6c
 
 #define OTP_MAGIC		"SOCOTP"
 #define CHECKSUM_LEN		32
@@ -1898,7 +1900,9 @@ static int otp_prog_bit(int mode, int otp_dw_offset, int bit_offset, int value, 
 static int otp_update_rid(u32 update_num, int force)
 {
 	u32 otp_rid[2];
+	u32 sw_rid[2];
 	int rid_num = 0;
+	int sw_rid_num = 0;
 	int bit_offset;
 	int dw_offset;
 	int i;
@@ -1907,7 +1911,22 @@ static int otp_update_rid(u32 update_num, int force)
 	otp_read_conf(10, &otp_rid[0]);
 	otp_read_conf(11, &otp_rid[1]);
 
+	sw_rid[0] = readl(SW_REV_ID0);
+	sw_rid[1] = readl(SW_REV_ID1);
+
 	rid_num = get_rid_num(otp_rid);
+	sw_rid_num = get_rid_num(sw_rid);
+
+	if (sw_rid_num < 0) {
+		printf("SW revision id is invalid, please check.\n");
+		return OTP_FAILURE;
+	}
+
+	if (update_num > sw_rid_num) {
+		printf("current SW revision ID: 0x%x\n", sw_rid_num);
+		printf("update number could not bigger than current SW revision id\n");
+		return OTP_FAILURE;
+	}
 
 	if (rid_num < 0) {
 		printf("Currennt OTP revision ID cannot handle by this command,\n"
@@ -1920,8 +1939,12 @@ static int otp_update_rid(u32 update_num, int force)
 	otp_print_revid(otp_rid);
 	printf("input update number: 0x%x\n", update_num);
 
-	if (rid_num >= update_num) {
-		printf("OTP rev_id is bigger than 0x%x\n", update_num);
+	if (rid_num > update_num) {
+		printf("OTP rev_id is bigger than 0x%X\n", update_num);
+		printf("Skip\n");
+		return OTP_FAILURE;
+	} else if (rid_num == update_num) {
+		printf("OTP rev_id is same as input\n");
 		printf("Skip\n");
 		return OTP_FAILURE;
 	}
@@ -2265,7 +2288,9 @@ static int do_otpupdate(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[]
 static int do_otprid(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 {
 	u32 otp_rid[2];
+	u32 sw_rid[2];
 	int rid_num = 0;
+	int sw_rid_num = 0;
 	int ret;
 
 	if (argc != 1)
@@ -2275,8 +2300,13 @@ static int do_otprid(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 	otp_read_conf(10, &otp_rid[0]);
 	otp_read_conf(11, &otp_rid[1]);
 
-	rid_num = get_rid_num(otp_rid);
+	sw_rid[0] = readl(SW_REV_ID0);
+	sw_rid[1] = readl(SW_REV_ID1);
 
+	rid_num = get_rid_num(otp_rid);
+	sw_rid_num = get_rid_num(sw_rid);
+
+	printf("current SW revision ID: 0x%x\n", sw_rid_num);
 	if (rid_num >= 0) {
 		printf("current OTP revision ID: 0x%x\n", rid_num);
 		ret = CMD_RET_SUCCESS;
