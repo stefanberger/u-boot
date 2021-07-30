@@ -134,6 +134,16 @@ void hw_sha256(const unsigned char *pbuf, unsigned int buf_len,
 		debug("HACE failure: %d\n", rc);
 }
 
+void hw_sha384(const unsigned char *pbuf, unsigned int buf_len,
+	       unsigned char *pout, unsigned int chunk_size)
+{
+	int rc;
+
+	rc = digest_object(pbuf, buf_len, pout, HACE_ALGO_SHA384);
+	if (rc)
+		debug("HACE failure: %d\n", rc);
+}
+
 void hw_sha512(const unsigned char *pbuf, unsigned int buf_len,
 	       unsigned char *pout, unsigned int chunk_size)
 {
@@ -154,6 +164,8 @@ int hw_sha_init(struct hash_algo *algo, void **ctxp)
 		method = HACE_ALGO_SHA1;
 	else if (!strcmp(algo->name, "sha256"))
 		method = HACE_ALGO_SHA256;
+	else if (!strcmp(algo->name, "sha384"))
+		method = HACE_ALGO_SHA384;
 	else if (!strcmp(algo->name, "sha512"))
 		method = HACE_ALGO_SHA512;
 	else
