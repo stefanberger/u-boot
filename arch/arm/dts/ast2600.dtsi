@@ -313,8 +313,8 @@
 				status = "disabled";
 			};
 
-			arcy: arcy@1e6fa000 {
-				compatible = "aspeed,ast2600-arcy";
+			acry: acry@1e6fa000 {
+				compatible = "aspeed,ast2600-acry";
 				reg = <0x1e6fa000 0x1000>;
 				interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&scu ASPEED_CLK_GATE_RSAECCCLK>;

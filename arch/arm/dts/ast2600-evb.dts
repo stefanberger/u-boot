@@ -322,7 +322,7 @@
 	status = "okay";
 };
 
-&arcy {
+&acry {
 	u-boot,dm-pre-reloc;
 	status = "okay";
 };

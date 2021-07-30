@@ -44,9 +44,9 @@ void spl_board_init(void)
 	}
 
 	if (uclass_get_device_by_driver(UCLASS_MISC,
-					DM_GET_DRIVER(aspeed_arcy),
+					DM_GET_DRIVER(aspeed_acry),
 					&dev)) {
-		debug("Warning: ARCY initialization failure\n");
+		debug("Warning: ACRY initialization failure\n");
 	}
 }
 #endif
