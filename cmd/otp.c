@@ -873,6 +873,7 @@ static int otp_print_conf_image(struct otp_image_layout *image_layout)
 	u32 otp_value;
 	u32 otp_ignore;
 	int fail = 0;
+	int mask_err;
 	int rid_num = 0;
 	char valid_bit[20];
 	int fz;
@@ -882,16 +883,26 @@ static int otp_print_conf_image(struct otp_image_layout *image_layout)
 	printf("DW    BIT        Value       Description\n");
 	printf("__________________________________________________________________________\n");
 	for (i = 0; i < info_cb.conf_info_len; i++) {
+		mask_err = 0;
 		dw_offset = conf_info[i].dw_offset;
 		bit_offset = conf_info[i].bit_offset;
 		mask = BIT(conf_info[i].length) - 1;
 		otp_value = (OTPCFG[dw_offset] >> bit_offset) & mask;
 		otp_ignore = (OTPCFG_IGNORE[dw_offset] >> bit_offset) & mask;
 
-		if (otp_ignore == mask)
-			continue;
-		else if (otp_ignore != 0)
-			fail = 1;
+		if (conf_info[i].value == OTP_REG_VALID_BIT) {
+			if (((otp_value + otp_ignore) & mask) != mask) {
+				fail = 1;
+				mask_err = 1;
+			}
+		} else {
+			if (otp_ignore == mask) {
+				continue;
+			} else if (otp_ignore != 0) {
+				fail = 1;
+				mask_err = 1;
+			}
+		}
 
 		if (otp_value != conf_info[i].value &&
 		    conf_info[i].value != OTP_REG_RESERVED &&
@@ -909,8 +920,8 @@ static int otp_print_conf_image(struct otp_image_layout *image_layout)
 		}
 		printf("0x%-10x", otp_value);
 
-		if (fail) {
-			printf("Ignore mask error\n");
+		if (mask_err) {
+			printf("Ignore, mask error\n");
 			continue;
 		}
 		if (conf_info[i].value == OTP_REG_RESERVED) {
@@ -1070,6 +1081,7 @@ static int otp_print_strap_image(struct otp_image_layout *image_layout)
 	printf("__________________________________________________________________________________________\n");
 
 	for (i = 0; i < info_cb.strap_info_len; i++) {
+		fail = 0;
 		if (strap_info[i].bit_offset > 31) {
 			dw_offset = 1;
 			bit_offset = strap_info[i].bit_offset - 32;
@@ -1746,17 +1758,17 @@ static int otp_prog_image(int addr, int nconfirm)
 				return OTP_FAILURE;
 			}
 		}
-		if (otp_header->image_info & OTP_INC_STRAP) {
-			printf("\nOTP strap region :\n");
-			if (otp_print_strap_image(&image_layout) < 0) {
-				printf("OTP strap error, please check.\n");
-				return OTP_FAILURE;
-			}
-		}
 		if (otp_header->image_info & OTP_INC_CONFIG) {
 			printf("\nOTP configuration region :\n");
 			if (otp_print_conf_image(&image_layout) < 0) {
 				printf("OTP config error, please check.\n");
+				return OTP_FAILURE;
+			}
+		}
+		if (otp_header->image_info & OTP_INC_STRAP) {
+			printf("\nOTP strap region :\n");
+			if (otp_print_strap_image(&image_layout) < 0) {
+				printf("OTP strap error, please check.\n");
 				return OTP_FAILURE;
 			}
 		}
