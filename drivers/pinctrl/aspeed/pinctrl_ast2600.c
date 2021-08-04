@@ -307,6 +307,11 @@ static struct aspeed_sig_desc fsi2[] = {
 	{ 0xd48, GENMASK(23, 22), 0 },
 };
 
+static struct aspeed_sig_desc usb2ad_link[] = {
+	{ 0x440, BIT(24), 0 },
+	{ 0x440, BIT(25), 1 },
+};
+
 static struct aspeed_sig_desc usb2ah_link[] = {
 	{ 0x440, BIT(24), 1 },
 	{ 0x440, BIT(25), 0 },
@@ -380,6 +385,7 @@ static const struct aspeed_group_config ast2600_groups[] = {
 	{ "I2C16", ARRAY_SIZE(i2c16_link), i2c16_link },
 	{ "FSI1", ARRAY_SIZE(fsi1), fsi1 },
 	{ "FSI2", ARRAY_SIZE(fsi2), fsi2 },
+	{ "USB2AD", ARRAY_SIZE(usb2ad_link), usb2ad_link },
 	{ "USB2AH", ARRAY_SIZE(usb2ah_link), usb2ah_link },
 	{ "USB2BH", ARRAY_SIZE(usb2bh_link), usb2bh_link },
 	{ "PCIE0RC", ARRAY_SIZE(pcie0rc_link), pcie0rc_link },
