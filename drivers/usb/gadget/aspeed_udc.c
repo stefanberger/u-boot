@@ -15,11 +15,6 @@
 
 #include "ep0.h"
 
-#define MIN(_x, _y)		\
-	typeof(_x) (x) = (_x);	\
-	typeof(_y) (y) = (_y);	\
-	((x) < (y) ? (x) : (y))
-
 /* number of endpoints on this UDC */
 #define UDC_MAX_ENDPOINTS	21
 
@@ -293,8 +288,8 @@ static void ast_udc_ep0_tx(struct usb_endpoint_instance *endpoint)
 	       urb->buffer, urb->buffer_length,
 	       urb->actual_length, endpoint->sent);
 
-	last = MIN(urb->actual_length - endpoint->sent,
-		   endpoint->tx_packetSize);
+	last = min((int)(urb->actual_length - endpoint->sent),
+		   (int)endpoint->tx_packetSize);
 
 	if (last) {
 		u8 *cp = urb->buffer + endpoint->sent;

@@ -34,6 +34,7 @@
 	"loadaddr=" STR(CONFIG_SYS_LOAD_ADDR) "\0"	\
 	"bootspi=fdt addr 20100000 && fdt header get fitsize totalsize && cp.b 20100000 ${loadaddr} ${fitsize} && bootm; echo Error loading kernel FIT image\0"	\
 	"verify=yes\0"	\
+	"usbtty=cdc_acm\0"	\
 	""
 
 #ifdef CONFIG_SPL_TINY
@@ -41,5 +42,14 @@
 #define CONFIG_SYS_NS16550_REG_SIZE 2
 #endif
 #endif
+
+#define CONFIG_USB_DEVICE		1
+#define CONFIG_USB_TTY			1
+#define CONFIG_USBD_HS			1
+#define CONFIG_SYS_CONSOLE_IS_IN_ENV	1
+#define CONFIG_USBD_MANUFACTURER	"Aspeed"
+#define CONFIG_USBD_PRODUCT_NAME	"cdc-acm device"
+#define CONFIG_USBD_VENDORID		0x4153
+#define CONFIG_USBD_PRODUCTID		0x2600
 
 #endif	/* __CONFIG_H */
