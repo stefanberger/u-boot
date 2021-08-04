@@ -294,6 +294,12 @@
 };
 #endif
 
+#if 0
+&vhub {
+	status = "okay";
+};
+#endif
+
 &ehci1 {
 	status = "okay";
 };

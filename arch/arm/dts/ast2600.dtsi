@@ -239,6 +239,17 @@
 			status = "disabled";
 		};
 
+		vhub: usb-vhub@1e6a0000 {
+			compatible = "aspeed,ast2600-usb-vhub";
+			reg = <0x1e6a0000 0x350>;
+			interrupts = <GIC_SPI 5 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&syscon ASPEED_CLK_GATE_USBPORT1CLK>;
+			resets = <&rst ASPEED_RESET_EHCI_P1>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_usb2ad_default>;
+			status = "disabled";
+		};
+
 		ehci0: usb@1e6a1000 {
 			compatible = "aspeed,aspeed-ehci", "usb-ehci";
 			reg = <0x1e6a1000 0x100>;
@@ -1920,6 +1931,11 @@
 	pinctrl_usbcki_default: usbcki_default {
 		function = "USBCKI";
 		groups = "USBCKI";
+	};
+
+	pinctrl_usb2ad_default: usb2ad_default {
+		function = "USB2AD";
+		groups = "USB2AD";
 	};
 
 	pinctrl_usb2ah_default: usb2ah_default {
