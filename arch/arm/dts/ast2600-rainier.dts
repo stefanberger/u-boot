@@ -106,3 +106,13 @@
 		gpios = <ASPEED_GPIO(R, 0) GPIO_ACTIVE_HIGH>;
 	};
 };
+
+&hace {
+	u-boot,dm-pre-reloc;
+	status = "okay";
+};
+
+&acry {
+	u-boot,dm-pre-reloc;
+	status = "okay";
+};
