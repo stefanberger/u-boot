@@ -86,3 +86,13 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_emmc_default>;
 };
+
+&hace {
+	u-boot,dm-pre-reloc;
+	status = "okay";
+};
+
+&acry {
+	u-boot,dm-pre-reloc;
+	status = "okay";
+};
