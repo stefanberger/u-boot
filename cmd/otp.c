@@ -313,20 +313,20 @@ static void otp_soak(int soak)
 	if (info_cb.version == OTP_A2 || info_cb.version == OTP_A3) {
 		switch (soak) {
 		case 0: //default
-			otp_write(0x3000, 0x0210); // Write MRA
-			otp_write(0x5000, 0x2000); // Write MRB
+			otp_write(0x3000, 0x0); // Write MRA
+			otp_write(0x5000, 0x0); // Write MRB
 			otp_write(0x1000, 0x0); // Write MR
 			break;
 		case 1: //normal program
-			otp_write(0x3000, 0x1200); // Write MRA
-			otp_write(0x5000, 0x107F); // Write MRB
-			otp_write(0x1000, 0x1024); // Write MR
+			otp_write(0x3000, 0x1320); // Write MRA
+			otp_write(0x5000, 0x1008); // Write MRB
+			otp_write(0x1000, 0x0024); // Write MR
 			writel(0x04191388, OTP_TIMING); // 200us
 			break;
 		case 2: //soak program
-			otp_write(0x3000, 0x1220); // Write MRA
-			otp_write(0x5000, 0x2074); // Write MRB
-			otp_write(0x1000, 0x08a4); // Write MR
+			otp_write(0x3000, 0x1320); // Write MRA
+			otp_write(0x5000, 0x0007); // Write MRB
+			otp_write(0x1000, 0x0100); // Write MR
 			writel(0x04193a98, OTP_TIMING); // 600us
 			break;
 		}
