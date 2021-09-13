@@ -657,7 +657,7 @@ void mac_set_delay(MAC_ENGINE *p_eng, int32_t rx_d, int32_t tx_d)
 {
 	uint32_t rgmii = (uint32_t)p_eng->run.is_rgmii;
 	uint32_t mac_idx = p_eng->run.mac_idx;
-	uint32_t speed_idx = p_eng->run.speed_idx;	
+	u32 speed_idx = p_eng->run.speed_idx;
 
 	set_delay_func_tbl[rgmii][mac_idx][speed_idx] (p_eng, rx_d, tx_d);
 }
@@ -682,9 +682,9 @@ uint32_t mac_get_driving_strength(MAC_ENGINE *p_eng)
 	reg.w = readl(p_eng->io.mac12_drv_reg.addr);
 	
 	if (p_eng->run.mac_idx == 0) {
-		return (reg.b.mac1_tx_drv);
+		return reg.b.mac1_rgmii_tx_drv;
 	} else if (p_eng->run.mac_idx == 1) {
-		return (reg.b.mac2_tx_drv);
+		return reg.b.mac2_rgmii_tx_drv;
 	} else {
 		return 0;
 	}

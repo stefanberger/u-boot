@@ -87,16 +87,16 @@ const uint32_t mac_base_lookup_tbl[2] = {MAC1_BASE, MAC2_BASE};
 const uint32_t mdio_base_lookup_tbl[2] = {MDIO0_BASE, MDIO1_BASE};
 const struct mac_ctrl_desc mac_ctrl_lookup_tbl[2] = {
 	{
-		.base_reset_assert = 0x04, .bit_reset_assert = 11,
-		.base_reset_deassert = 0x04,.bit_reset_deassert = 11,
-		.base_clk_stop = 0x0c, .bit_clk_stop = 20,
-		.base_clk_start = 0x0c, .bit_clk_start = 20,
+		.base_reset_assert = 0x04, .bit_reset_assert = BIT(11),
+		.base_reset_deassert = 0x04, .bit_reset_deassert = BIT(11),
+		.base_clk_stop = 0x0c, .bit_clk_stop = BIT(20),
+		.base_clk_start = 0x0c, .bit_clk_start = BIT(20),
 	},
 	{
-		.base_reset_assert = 0x04, .bit_reset_assert = 12,
-		.base_reset_deassert = 0x04,.bit_reset_deassert = 12,
-		.base_clk_stop = 0x0c, .bit_clk_stop = 21,
-		.base_clk_start = 0x0c,.bit_clk_start = 21,
+		.base_reset_assert = 0x04, .bit_reset_assert = BIT(12),
+		.base_reset_deassert = 0x04, .bit_reset_deassert = BIT(12),
+		.base_clk_stop = 0x0c, .bit_clk_stop = BIT(21),
+		.base_clk_start = 0x0c, .bit_clk_start = BIT(21),
 	}
 };
 #endif
@@ -536,17 +536,17 @@ void scu_enable_mac(MAC_ENGINE *p_eng)
 	/* issue a dummy read to ensure command is in order */
 	reg = SCU_RD(p_mac->base_clk_start);
 #else
-	reg = SCU_RD(p_mac->base_reset_deassert);
-	reg &= ~p_mac->bit_reset_deassert;
-	SCU_WR(reg, p_mac->base_reset_deassert);
-	/* issue a dummy read to ensure command is in order */
-	reg = SCU_RD(p_mac->base_reset_deassert);
+	reg = SCU_RD(p_mac->base_reset_assert);
+	debug("reset reg: 0x%08x\n", reg);
+	reg &= ~p_mac->bit_reset_assert;
+	debug("reset reg: 0x%08x\n", reg);
+	SCU_WR(reg, p_mac->base_reset_assert);
 	
-	reg = SCU_RD(p_mac->base_clk_start);
-	reg &= ~p_mac->bit_clk_start;
-	SCU_WR(reg, p_mac->base_clk_start);
-	/* issue a dummy read to ensure command is in order */
-	reg = SCU_RD(p_mac->base_clk_start);
+	reg = SCU_RD(p_mac->base_clk_stop);
+	debug("clock reg: 0x%08x\n", reg);
+	reg &= ~p_mac->bit_clk_stop;
+	debug("clock reg: 0x%08x\n", reg);
+	SCU_WR(reg, p_mac->base_clk_stop);
 #endif
 }
 
@@ -1423,10 +1423,12 @@ void dump_setting(MAC_ENGINE *p_eng)
 	printf("===================\n");
 
 
+#if defined(CONFIG_ASPEED_AST2600)
 	printf("RGMIICK of MAC1/2 = %d Hz\n", ring_clk(0x320, 0xf));
 	printf("RGMIICK of MAC3/4 = %d Hz\n", ring_clk(0x330, 0x9));
 	printf("EPLL              = %d Hz\n", ring_clk(0x320, 0x5) * 4);
 	printf("HCLK              = %d Hz\n", ring_clk(0x330, 0x1));
+#endif
 
 }
 /**
