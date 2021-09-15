@@ -71,19 +71,16 @@ static void rtk_dbg_gpio_init(void)
 //------------------------------------------------------------
 void phy_write (MAC_ENGINE *eng, int index, uint32_t data) 
 {
+	u32 wr_data;
 	int timeout = 0;
 
 	if (eng->env.is_new_mdio_reg[eng->run.mdio_idx]) {
-#ifdef CONFIG_ASPEED_AST2600
-		writel(data | MAC_PHYWr_New | (eng->phy.Adr << 21) |
-			   (index << 16),
-		       eng->run.mdio_base);
-#else
-		writel(data | MAC_PHYWr_New | (eng->phy.Adr << 5) | index,
-		       eng->run.mdio_base);
-#endif
+		wr_data = MDIO_WR_CODE | MDIO_SET_WR_DATA(data) |
+			  MDIO_SET_PHY_ADDR(eng->phy.Adr) |
+			  MDIO_SET_REG_ADDR(index);
+		writel(wr_data, eng->run.mdio_base);
 		/* check time-out */
-		while(readl(eng->run.mdio_base) & MAC_PHYBusy_New) {
+		while (readl(eng->run.mdio_base) & MDIO_FIRE_BUSY) {
 			if (++timeout > TIME_OUT_PHY_RW) {
 				if (!eng->run.tm_tx_only)
 					PRINTF(FP_LOG,
@@ -96,10 +93,12 @@ void phy_write (MAC_ENGINE *eng, int index, uint32_t data)
 		}
 	} else {
 		writel(data, eng->run.mdio_base + 0x4);
-		writel(MDC_Thres | MAC_PHYWr | (eng->phy.Adr << 16) |
-				     ((index & 0x1f) << 21), eng->run.mdio_base);
+		writel(MDC_CYC_THLD | MDIO_WR_CODE_OLD |
+			       MDIO_SET_PHY_ADDR_OLD(eng->phy.Adr) |
+			       MDIO_SET_REG_ADDR_OLD(index),
+		       eng->run.mdio_base);
 
-		while (readl(eng->run.mdio_base) & MAC_PHYWr) {
+		while (readl(eng->run.mdio_base) & MDIO_WR_CODE_OLD) {
 			if (++timeout > TIME_OUT_PHY_RW) {
 				if (!eng->run.tm_tx_only)
 					PRINTF(FP_LOG,
@@ -135,15 +134,11 @@ uint16_t phy_read (MAC_ENGINE *eng, int index)
 	}
 
 	if (eng->env.is_new_mdio_reg[eng->run.mdio_idx]) {
-#ifdef CONFIG_ASPEED_AST2600
-		writel(MAC_PHYRd_New | (eng->phy.Adr << 21) | (index << 16),
+		writel(MDIO_RD_CODE | MDIO_SET_PHY_ADDR_OLD(eng->phy.Adr) |
+			       MDIO_SET_REG_ADDR(index),
 		       eng->run.mdio_base);
-#else
-		writel(MAC_PHYRd_New | (eng->phy.Adr << 5) | index,
-		       eng->run.mdio_base);
-#endif
 
-		while (readl(eng->run.mdio_base) & MAC_PHYBusy_New) {
+		while (readl(eng->run.mdio_base) & MDIO_FIRE_BUSY) {
 			if (++timeout > TIME_OUT_PHY_RW) {
 				if (!eng->run.tm_tx_only)
 					PRINTF(FP_LOG,
@@ -160,11 +155,12 @@ uint16_t phy_read (MAC_ENGINE *eng, int index)
 #endif
 		read_value = readl(eng->run.mdio_base + 0x4) & GENMASK(15, 0);
 	} else {
-		writel(MDC_Thres | MAC_PHYRd | (eng->phy.Adr << 16) |
-			   (index << 21),
+		writel(MDC_CYC_THLD | MDIO_RD_CODE_OLD |
+			       MDIO_SET_PHY_ADDR_OLD(eng->phy.Adr) |
+			       MDIO_SET_REG_ADDR_OLD(index),
 		       eng->run.mdio_base);
 
-		while (readl(eng->run.mdio_base) & MAC_PHYRd) {
+		while (readl(eng->run.mdio_base) & MDIO_RD_CODE_OLD) {
 			if (++timeout > TIME_OUT_PHY_RW) {
 				if (!eng->run.tm_tx_only)
 					PRINTF(FP_LOG,

@@ -85,26 +85,35 @@
 #define  DEF_GSPEED                              SET_1G_100M_10MBPS
 #define  DEF_GARPNUMCNT                          0
 
-//---------------------------------------------------------
-// MAC information
-//---------------------------------------------------------
+/* MAC information */
 
-#define MDC_Thres                                0x3f
-#define MAC_PHYWr                                0x08000000
-#define MAC_PHYRd                                0x04000000
+/* old interface - deprecated */
+#define MDC_CYC_THLD				0x3f
+#define MDIO_WR_CODE_OLD			BIT(27)
+#define MDIO_RD_CODE_OLD			BIT(26)
+
+#define MDIO_SET_PHY_ADDR_OLD(addr)		((addr) << 16)
+#define MDIO_SET_REG_ADDR_OLD(reg)		((reg) << 21)
 
 #ifdef CONFIG_ASPEED_AST2600
-#define MAC_PHYWr_New 	(BIT(31) | BIT(28) | (0x1 << 26)) /* 0x94000000 */
-#define MAC_PHYRd_New 	(BIT(31) | BIT(28) | (0x2 << 26)) /* 0x98000000 */
-#define MAC_PHYBusy_New	BIT(31)
+#define MDIO_FIRE_BUSY				BIT(31)
+#define MDIO_WR_CODE				(MDIO_FIRE_BUSY | BIT(28) | (0x1 << 26))
+#define MDIO_RD_CODE				(MDIO_FIRE_BUSY | BIT(28) | (0x2 << 26))
+#define MDIO_SET_WR_DATA(x)			((x) << 0)
+#define MDIO_GET_WR_DATA(x)			((x) & GENMASK(15, 0))
+#define MDIO_SET_PHY_ADDR(addr)			((addr) << 21)
+#define MDIO_SET_REG_ADDR(reg)			((reg) << 16)
 #else
-#define MAC_PHYWr_New                            0x00009400
-#define MAC_PHYRd_New                            0x00009800
-#define MAC_PHYBusy_New                          0x00008000
+#define MDIO_FIRE_BUSY				BIT(15)
+#define MDIO_WR_CODE				(MDIO_FIRE_BUSY | BIT(12) | (0x1 << 10))
+#define MDIO_RD_CODE				(MDIO_FIRE_BUSY | BIT(12) | (0x2 << 10))
+#define MDIO_SET_WR_DATA(x)			((x) << 16)
+#define MDIO_GET_WR_DATA(x)			(((x) & GENMASK(31, 16)) >> 16)
+#define MDIO_SET_PHY_ADDR(addr)			((addr) << 5)
+#define MDIO_SET_REG_ADDR(reg)			((reg) << 0)
 #endif
 
-#define MAC_048_def                          0x000002F1 //default 0xf1
-//#define MAC_058_def                              0x00000040 //0x000001c0
+#define MAC_048_def				0x000002F1 /* default 0xf1 */
 
 //---------------------------------------------------------
 // Data information
