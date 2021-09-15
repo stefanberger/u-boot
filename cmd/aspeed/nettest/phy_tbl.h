@@ -1,3 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
+/*
+ * Copyright (C) ASPEED Technology Inc.
+ */
 void recov_phy_marvell(MAC_ENGINE *eng);
 void phy_marvell(MAC_ENGINE *eng);
 void recov_phy_marvell0(MAC_ENGINE *eng);
