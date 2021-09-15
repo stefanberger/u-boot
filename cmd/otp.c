@@ -2389,8 +2389,8 @@ static int do_ast_otp(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 		info_cb.version = OTP_A2;
 		info_cb.conf_info = a2_conf_info;
 		info_cb.conf_info_len = ARRAY_SIZE(a2_conf_info);
-		info_cb.strap_info = a2_strap_info;
-		info_cb.strap_info_len = ARRAY_SIZE(a2_strap_info);
+		info_cb.strap_info = a1_strap_info;
+		info_cb.strap_info_len = ARRAY_SIZE(a1_strap_info);
 		info_cb.key_info = a2_key_type;
 		info_cb.key_info_len = ARRAY_SIZE(a2_key_type);
 		sprintf(info_cb.ver_name, "A2");
@@ -2399,8 +2399,8 @@ static int do_ast_otp(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 		info_cb.version = OTP_A3;
 		info_cb.conf_info = a3_conf_info;
 		info_cb.conf_info_len = ARRAY_SIZE(a3_conf_info);
-		info_cb.strap_info = a3_strap_info;
-		info_cb.strap_info_len = ARRAY_SIZE(a3_strap_info);
+		info_cb.strap_info = a1_strap_info;
+		info_cb.strap_info_len = ARRAY_SIZE(a1_strap_info);
 		info_cb.key_info = a3_key_type;
 		info_cb.key_info_len = ARRAY_SIZE(a3_key_type);
 		sprintf(info_cb.ver_name, "A3");
