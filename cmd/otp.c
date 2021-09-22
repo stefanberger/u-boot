@@ -2008,6 +2008,7 @@ static int do_otpread(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 	} else {
 		return CMD_RET_USAGE;
 	}
+	writel(1, OTP_PROTECT_KEY); //protect otp controller
 
 	if (ret == OTP_SUCCESS)
 		return CMD_RET_SUCCESS;
@@ -2032,6 +2033,7 @@ static int do_otpprog(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 	} else {
 		return CMD_RET_USAGE;
 	}
+	writel(1, OTP_PROTECT_KEY); //protect otp controller
 
 	if (ret == OTP_SUCCESS)
 		return CMD_RET_SUCCESS;
@@ -2101,6 +2103,7 @@ static int do_otppb(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 
 	writel(OTP_PASSWD, OTP_PROTECT_KEY); //password
 	ret = otp_prog_bit(mode, otp_addr, bit_offset, value, nconfirm);
+	writel(1, OTP_PROTECT_KEY); //protect otp controller
 
 	if (ret == OTP_SUCCESS)
 		return CMD_RET_SUCCESS;
@@ -2114,14 +2117,17 @@ static int do_otpcmp(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 {
 	phys_addr_t addr;
 	int otp_addr = 0;
+	int ret;
 
 	if (argc != 3)
 		return CMD_RET_USAGE;
 
-	writel(OTP_PASSWD, OTP_PROTECT_KEY); //password
 	addr = simple_strtoul(argv[1], NULL, 16);
 	otp_addr = simple_strtoul(argv[2], NULL, 16);
-	if (otp_compare(otp_addr, addr) == 0) {
+	writel(OTP_PASSWD, OTP_PROTECT_KEY); //password
+	ret = otp_compare(otp_addr, addr);
+	writel(1, OTP_PROTECT_KEY); //protect otp controller
+	if (ret == 0) {
 		printf("Compare pass\n");
 		return CMD_RET_SUCCESS;
 	}
@@ -2161,6 +2167,7 @@ static int do_otpinfo(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 		return CMD_RET_USAGE;
 	}
 
+	writel(1, OTP_PROTECT_KEY); //protect otp controller
 	return CMD_RET_SUCCESS;
 }
 
@@ -2204,6 +2211,7 @@ static int do_otpprotect(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[
 
 	ret = otp_prog_dc_b(1, prog_address, bit_offset);
 	otp_soak(0);
+	writel(1, OTP_PROTECT_KEY); //protect otp controller
 
 	if (ret) {
 		printf("Protect OTPSTRAP[%X] fail\n", input);
@@ -2265,7 +2273,7 @@ static int do_otp_scuprotect(cmd_tbl_t *cmdtp, int flag, int argc, char *const a
 
 	ret = otp_prog_dc_b(1, prog_address, bit_offset);
 	otp_soak(0);
-	writel(1, OTP_PROTECT_KEY); // controller protect
+	writel(1, OTP_PROTECT_KEY); //protect otp controller
 
 	if (ret) {
 		printf("Program OTPCONF%X[%X] fail\n", conf_offset, bit_offset);
@@ -2306,6 +2314,8 @@ static int do_otpupdate(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[]
 		return CMD_RET_USAGE;
 	writel(OTP_PASSWD, OTP_PROTECT_KEY); //password
 	ret = otp_update_rid(update_num, force);
+	writel(1, OTP_PROTECT_KEY); //protect otp controller
+
 	if (ret)
 		return CMD_RET_FAILURE;
 	return CMD_RET_SUCCESS;
@@ -2325,6 +2335,7 @@ static int do_otprid(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 	writel(OTP_PASSWD, OTP_PROTECT_KEY); //password
 	otp_read_conf(10, &otp_rid[0]);
 	otp_read_conf(11, &otp_rid[1]);
+	writel(1, OTP_PROTECT_KEY); //protect otp controller
 
 	sw_rid[0] = readl(SW_REV_ID0);
 	sw_rid[1] = readl(SW_REV_ID1);
@@ -2431,7 +2442,7 @@ static int do_ast_otp(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 	}
 
 	ret = cp->cmd(cmdtp, flag, argc, argv);
-	writel(1, OTP_PROTECT_KEY); //password
+	writel(1, OTP_PROTECT_KEY); //protect otp controller
 
 	return ret;
 }
