@@ -1965,7 +1965,7 @@ static int otp_update_rid(u32 update_num, int force)
 			break;
 		}
 	}
-
+	otp_soak(0);
 	otp_read_conf(10, &otp_rid[0]);
 	otp_read_conf(11, &otp_rid[1]);
 	rid_num = get_rid_num(otp_rid);
