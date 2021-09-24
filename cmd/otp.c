@@ -594,6 +594,13 @@ static int otp_prog_verify_2dw(u32 *data, u32 *buf, u32 *ignore_mask, u32 prog_a
 	if (data0_masked == buf0_masked && data1_masked == buf1_masked)
 		return OTP_SUCCESS;
 
+	for (i = 0; i < 32; i++) {
+		if (((data0_masked >> i) & 0x1) == 1 && ((buf0_masked >> i) & 0x1) == 0)
+			return OTP_FAILURE;
+		if (((data1_masked >> i) & 0x1) == 0 && ((buf1_masked >> i) & 0x1) == 1)
+			return OTP_FAILURE;
+	}
+
 	otp_soak(1);
 	if (data0_masked != buf0_masked)
 		otp_prog_dw(buf[0], ignore_mask[0], prog_address);
@@ -1359,95 +1366,15 @@ static int otp_print_data_image(struct otp_image_layout *image_layout)
 	return OTP_SUCCESS;
 }
 
-static int otp_strap_image_confirm(struct otp_image_layout *image_layout)
-{
-	int i;
-	u32 *strap;
-	u32 *strap_ignore;
-	u32 *strap_pro;
-	int bit, pbit, ibit;
-	int fail = 0;
-	int ret;
-	struct otpstrap_status otpstrap[64];
-
-	strap = (u32 *)image_layout->strap;
-	strap_pro = (u32 *)image_layout->strap_pro;
-	strap_ignore = (u32 *)image_layout->strap_ignore;
-
-	otp_strap_status(otpstrap);
-	for (i = 0; i < 64; i++) {
-		if (i < 32) {
-			bit = (strap[0] >> i) & 0x1;
-			ibit = (strap_ignore[0] >> i) & 0x1;
-			pbit = (strap_pro[0] >> i) & 0x1;
-		} else {
-			bit = (strap[1] >> (i - 32)) & 0x1;
-			ibit = (strap_ignore[1] >> (i - 32)) & 0x1;
-			pbit = (strap_pro[1] >> (i - 32)) & 0x1;
-		}
-
-		ret = otp_strap_bit_confirm(&otpstrap[i], i, ibit, bit, pbit);
-
-		if (ret == OTP_FAILURE)
-			fail = 1;
-	}
-	if (fail == 1)
-		return OTP_FAILURE;
-	else
-		return OTP_SUCCESS;
-}
-
-static int otp_prog_data(struct otp_image_layout *image_layout)
+static int otp_prog_data(struct otp_image_layout *image_layout, u32 *data)
 {
 	int i;
 	int ret;
-	int data_dw;
-	u32 data[2048];
 	u32 *buf;
 	u32 *buf_ignore;
-	u32 data_masked;
-	u32 buf_masked;
 
 	buf = (u32 *)image_layout->data;
 	buf_ignore = (u32 *)image_layout->data_ignore;
-
-	data_dw = image_layout->data_length / 4;
-
-	printf("Read OTP Data:\n");
-
-	for (i = 0; i < data_dw - 2 ; i += 2)
-		otp_read_data(i, &data[i]);
-
-	printf("Check writable...\n");
-	// ignore last two dw, the last two dw is used for slt otp write check.
-	for (i = 0; i < data_dw - 2; i++) {
-		data_masked = data[i]  & ~buf_ignore[i];
-		buf_masked  = buf[i] & ~buf_ignore[i];
-		if (data_masked == buf_masked)
-			continue;
-		if (i % 2 == 0) {
-			if ((data_masked | buf_masked) == buf_masked) {
-				continue;
-			} else {
-				printf("Input image can't program into OTP, please check.\n");
-				printf("OTP_ADDR[%x] = %x\n", i, data[i]);
-				printf("Input   [%x] = %x\n", i, buf[i]);
-				printf("Mask    [%x] = %x\n", i, ~buf_ignore[i]);
-				return OTP_FAILURE;
-			}
-		} else {
-			if ((data_masked & buf_masked) == buf_masked) {
-				continue;
-			} else {
-				printf("Input image can't program into OTP, please check.\n");
-				printf("OTP_ADDR[%x] = %x\n", i, data[i]);
-				printf("Input   [%x] = %x\n", i, buf[i]);
-				printf("Mask    [%x] = %x\n", i, ~buf_ignore[i]);
-				return OTP_FAILURE;
-			}
-		}
-	}
-
 	printf("Start Programing...\n");
 
 	// programing ecc region first
@@ -1472,7 +1399,7 @@ static int otp_prog_data(struct otp_image_layout *image_layout)
 	return OTP_SUCCESS;
 }
 
-static int otp_prog_strap(struct otp_image_layout *image_layout)
+static int otp_prog_strap(struct otp_image_layout *image_layout, struct otpstrap_status *otpstrap)
 {
 	u32 *strap;
 	u32 *strap_ignore;
@@ -1483,20 +1410,10 @@ static int otp_prog_strap(struct otp_image_layout *image_layout)
 	int fail = 0;
 	int ret;
 	int prog_flag = 0;
-	struct otpstrap_status otpstrap[64];
 
 	strap = (u32 *)image_layout->strap;
 	strap_pro = (u32 *)image_layout->strap_pro;
 	strap_ignore = (u32 *)image_layout->strap_ignore;
-
-	printf("Read OTP Strap Region:\n");
-	otp_strap_status(otpstrap);
-
-	printf("Check writable...\n");
-	if (otp_strap_image_confirm(image_layout) == OTP_FAILURE) {
-		printf("Input image can't program into OTP, please check.\n");
-		return OTP_FAILURE;
-	}
 
 	for (i = 0; i < 64; i++) {
 		prog_address = 0x800;
@@ -1557,48 +1474,21 @@ static int otp_prog_strap(struct otp_image_layout *image_layout)
 	return OTP_SUCCESS;
 }
 
-static int otp_prog_conf(struct otp_image_layout *image_layout)
+static int otp_prog_conf(struct otp_image_layout *image_layout, u32 *otp_conf)
 {
 	int i, k;
 	int pass = 0;
 	u32 prog_address;
-	u32 data[16];
 	u32 compare[2];
 	u32 *conf = (u32 *)image_layout->conf;
 	u32 *conf_ignore = (u32 *)image_layout->conf_ignore;
 	u32 data_masked;
 	u32 buf_masked;
 
-	printf("Read OTP Config Region:\n");
-
-	for (i = 0; i < 16 ; i++) {
-		prog_address = 0x800;
-		prog_address |= (i / 8) * 0x200;
-		prog_address |= (i % 8) * 0x2;
-		otp_read_data(prog_address, &data[i]);
-	}
-
-	printf("Check writable...\n");
-	for (i = 0; i < 16; i++) {
-		data_masked = data[i]  & ~conf_ignore[i];
-		buf_masked  = conf[i] & ~conf_ignore[i];
-		if (data_masked == buf_masked)
-			continue;
-		if ((data_masked | buf_masked) == buf_masked) {
-			continue;
-		} else {
-			printf("Input image can't program into OTP, please check.\n");
-			printf("OTPCFG[%X] = %x\n", i, data[i]);
-			printf("Input [%X] = %x\n", i, conf[i]);
-			printf("Mask  [%X] = %x\n", i, ~conf_ignore[i]);
-			return OTP_FAILURE;
-		}
-	}
-
 	printf("Start Programing...\n");
 	otp_soak(0);
 	for (i = 0; i < 16; i++) {
-		data_masked = data[i]  & ~conf_ignore[i];
+		data_masked = otp_conf[i]  & ~conf_ignore[i];
 		buf_masked  = conf[i] & ~conf_ignore[i];
 		prog_address = 0x800;
 		prog_address |= (i / 8) * 0x200;
@@ -1628,8 +1518,8 @@ static int otp_prog_conf(struct otp_image_layout *image_layout)
 			}
 		}
 		if (pass == 0) {
-			printf("address: %08x, data: %08x, buffer: %08x, mask: %08x\n",
-			       i, data[i], conf[i], conf_ignore[i]);
+			printf("address: %08x, otp_conf: %08x, input_conf: %08x, mask: %08x\n",
+			       i, otp_conf[i], conf[i], conf_ignore[i]);
 			break;
 		}
 	}
@@ -1638,6 +1528,110 @@ static int otp_prog_conf(struct otp_image_layout *image_layout)
 	if (!pass)
 		return OTP_FAILURE;
 
+	return OTP_SUCCESS;
+}
+
+static int otp_check_data_image(struct otp_image_layout *image_layout, u32 *data)
+{
+	int data_dw;
+	u32 data_masked;
+	u32 buf_masked;
+	u32 *buf = (u32 *)image_layout->data;
+	u32 *buf_ignore = (u32 *)image_layout->data_ignore;
+	int i;
+
+	data_dw = image_layout->data_length / 4;
+	// ignore last two dw, the last two dw is used for slt otp write check.
+	for (i = 0; i < data_dw - 2; i++) {
+		data_masked = data[i]  & ~buf_ignore[i];
+		buf_masked  = buf[i] & ~buf_ignore[i];
+		if (data_masked == buf_masked)
+			continue;
+		if (i % 2 == 0) {
+			if ((data_masked | buf_masked) == buf_masked) {
+				continue;
+			} else {
+				printf("Input image can't program into OTP, please check.\n");
+				printf("OTP_ADDR[%x] = %x\n", i, data[i]);
+				printf("Input   [%x] = %x\n", i, buf[i]);
+				printf("Mask    [%x] = %x\n", i, ~buf_ignore[i]);
+				return OTP_FAILURE;
+			}
+		} else {
+			if ((data_masked & buf_masked) == buf_masked) {
+				continue;
+			} else {
+				printf("Input image can't program into OTP, please check.\n");
+				printf("OTP_ADDR[%x] = %x\n", i, data[i]);
+				printf("Input   [%x] = %x\n", i, buf[i]);
+				printf("Mask    [%x] = %x\n", i, ~buf_ignore[i]);
+				return OTP_FAILURE;
+			}
+		}
+	}
+	return OTP_SUCCESS;
+}
+
+static int otp_check_strap_image(struct otp_image_layout *image_layout, struct otpstrap_status *otpstrap)
+{
+	int i;
+	u32 *strap;
+	u32 *strap_ignore;
+	u32 *strap_pro;
+	int bit, pbit, ibit;
+	int fail = 0;
+	int ret;
+
+	strap = (u32 *)image_layout->strap;
+	strap_pro = (u32 *)image_layout->strap_pro;
+	strap_ignore = (u32 *)image_layout->strap_ignore;
+
+	for (i = 0; i < 64; i++) {
+		if (i < 32) {
+			bit = (strap[0] >> i) & 0x1;
+			ibit = (strap_ignore[0] >> i) & 0x1;
+			pbit = (strap_pro[0] >> i) & 0x1;
+		} else {
+			bit = (strap[1] >> (i - 32)) & 0x1;
+			ibit = (strap_ignore[1] >> (i - 32)) & 0x1;
+			pbit = (strap_pro[1] >> (i - 32)) & 0x1;
+		}
+
+		ret = otp_strap_bit_confirm(&otpstrap[i], i, ibit, bit, pbit);
+
+		if (ret == OTP_FAILURE)
+			fail = 1;
+	}
+	if (fail == 1) {
+		printf("Input image can't program into OTP, please check.\n");
+		return OTP_FAILURE;
+	}
+	return OTP_SUCCESS;
+}
+
+static int otp_check_conf_image(struct otp_image_layout *image_layout, u32 *otp_conf)
+{
+	u32 *conf = (u32 *)image_layout->conf;
+	u32 *conf_ignore = (u32 *)image_layout->conf_ignore;
+	u32 data_masked;
+	u32 buf_masked;
+	int i;
+
+	for (i = 0; i < 16; i++) {
+		data_masked = otp_conf[i]  & ~conf_ignore[i];
+		buf_masked  = conf[i] & ~conf_ignore[i];
+		if (data_masked == buf_masked)
+			continue;
+		if ((data_masked | buf_masked) == buf_masked) {
+			continue;
+		} else {
+			printf("Input image can't program into OTP, please check.\n");
+			printf("OTPCFG[%X] = %x\n", i, otp_conf[i]);
+			printf("Input [%X] = %x\n", i, conf[i]);
+			printf("Mask  [%X] = %x\n", i, ~conf_ignore[i]);
+			return OTP_FAILURE;
+		}
+	}
 	return OTP_SUCCESS;
 }
 
@@ -1664,6 +1658,10 @@ static int otp_prog_image(int addr, int nconfirm)
 	int image_size;
 	u8 *buf;
 	u8 *checksum;
+	int i;
+	u32 data[2048];
+	u32 conf[16];
+	struct otpstrap_status otpstrap[64];
 
 	otp_header = map_physmem(addr, sizeof(struct otp_header), MAP_WRBACK);
 	if (!otp_header) {
@@ -1733,6 +1731,7 @@ static int otp_prog_image(int addr, int nconfirm)
 		printf("OTP memory is locked\n");
 		return OTP_FAILURE;
 	}
+	ret = 0;
 	if (otp_header->image_info & OTP_INC_DATA) {
 		if (info_cb.pro_sts.pro_data) {
 			printf("OTP data region is protected\n");
@@ -1742,21 +1741,42 @@ static int otp_prog_image(int addr, int nconfirm)
 			printf("OTP secure region is protected\n");
 			ret = -1;
 		}
+		printf("Read OTP Data Region:\n");
+		for (i = 0; i < 2048 ; i += 2)
+			otp_read_data(i, &data[i]);
+
+		printf("Check writable...\n");
+		if (otp_check_data_image(&image_layout, data) == OTP_FAILURE)
+			ret = -1;
 	}
 	if (otp_header->image_info & OTP_INC_CONFIG) {
 		if (info_cb.pro_sts.pro_conf) {
 			printf("OTP config region is protected\n");
 			ret = -1;
 		}
+		printf("Read OTP Config Region:\n");
+		for (i = 0; i < 16 ; i++)
+			otp_read_conf(i, &conf[i]);
+
+		printf("Check writable...\n");
+		if (otp_check_conf_image(&image_layout, conf) == OTP_FAILURE)
+			ret = -1;
 	}
 	if (otp_header->image_info & OTP_INC_STRAP) {
 		if (info_cb.pro_sts.pro_strap) {
 			printf("OTP strap region is protected\n");
 			ret = -1;
 		}
+		printf("Read OTP Strap Region:\n");
+		otp_strap_status(otpstrap);
+
+		printf("Check writable...\n");
+		if (otp_check_strap_image(&image_layout, otpstrap) == OTP_FAILURE)
+			ret = -1;
 	}
 	if (ret == -1)
 		return OTP_FAILURE;
+
 	if (!nconfirm) {
 		if (otp_header->image_info & OTP_INC_DATA) {
 			printf("\nOTP data region :\n");
@@ -1789,7 +1809,7 @@ static int otp_prog_image(int addr, int nconfirm)
 
 	if (otp_header->image_info & OTP_INC_DATA) {
 		printf("programing data region ...\n");
-		ret = otp_prog_data(&image_layout);
+		ret = otp_prog_data(&image_layout, data);
 		if (ret != 0) {
 			printf("Error\n");
 			return ret;
@@ -1798,7 +1818,7 @@ static int otp_prog_image(int addr, int nconfirm)
 	}
 	if (otp_header->image_info & OTP_INC_STRAP) {
 		printf("programing strap region ...\n");
-		ret = otp_prog_strap(&image_layout);
+		ret = otp_prog_strap(&image_layout, otpstrap);
 		if (ret != 0) {
 			printf("Error\n");
 			return ret;
@@ -1807,7 +1827,7 @@ static int otp_prog_image(int addr, int nconfirm)
 	}
 	if (otp_header->image_info & OTP_INC_CONFIG) {
 		printf("programing configuration region ...\n");
-		ret = otp_prog_conf(&image_layout);
+		ret = otp_prog_conf(&image_layout, conf);
 		if (ret != 0) {
 			printf("Error\n");
 			return ret;
@@ -1855,7 +1875,7 @@ static int otp_prog_bit(int mode, int otp_dw_offset, int bit_offset, int value, 
 
 			if (otp_bit == 1 && value == 0) {
 				printf("OTPDATA%X[%X] = 1\n", otp_dw_offset, bit_offset);
-				printf("OTP is programmed, which can't be cleaned\n");
+				printf("OTP is programmed, which can't be cleared\n");
 				return OTP_FAILURE;
 			}
 		} else {
@@ -1864,7 +1884,7 @@ static int otp_prog_bit(int mode, int otp_dw_offset, int bit_offset, int value, 
 
 			if (otp_bit == 0 && value == 1) {
 				printf("OTPDATA%X[%X] = 1\n", otp_dw_offset, bit_offset);
-				printf("OTP is programmed, which can't be writen\n");
+				printf("OTP is programmed, which can't be written\n");
 				return OTP_FAILURE;
 			}
 		}
@@ -1948,8 +1968,8 @@ static int otp_update_rid(u32 update_num, int force)
 	}
 
 	if (rid_num < 0) {
-		printf("Currennt OTP revision ID cannot handle by this command,\n"
-		       "plase use 'otp pb' command to update it manually\n");
+		printf("Current OTP revision ID cannot handle by this command,\n"
+		       "please use 'otp pb' command to update it manually\n");
 		otp_print_revid(otp_rid);
 		return OTP_FAILURE;
 	}
@@ -2483,8 +2503,8 @@ static int do_otprid(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 		printf("current OTP revision ID: 0x%x\n", rid_num);
 		ret = CMD_RET_SUCCESS;
 	} else {
-		printf("Currennt OTP revision ID cannot handle by 'otp update',\n"
-		       "plase use 'otp pb' command to update it manually\n"
+		printf("Current OTP revision ID cannot handle by 'otp update',\n"
+		       "please use 'otp pb' command to update it manually\n"
 		       "current OTP revision ID\n");
 		ret = CMD_RET_FAILURE;
 	}
