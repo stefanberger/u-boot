@@ -40,9 +40,6 @@ DECLARE_GLOBAL_DATA_PTR;
 #define OTP_KEY_TYPE_VAULT		4
 #define OTP_KEY_TYPE_HMAC		5
 
-#define PBSTR "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
-#define PBWIDTH 60
-
 #define OTP_BASE		0x1e6f2000
 #define OTP_PROTECT_KEY		OTP_BASE
 #define OTP_COMMAND		OTP_BASE + 0x4
@@ -63,6 +60,7 @@ DECLARE_GLOBAL_DATA_PTR;
 #define OTP_INC_CONFIG		BIT(30)
 #define OTP_INC_STRAP		BIT(29)
 #define OTP_ECC_EN		BIT(28)
+#define OTP_INC_SCU_PRO		BIT(25)
 #define OTP_REGION_SIZE(info)	((info >> 16) & 0xffff)
 #define OTP_REGION_OFFSET(info)	(info & 0xffff)
 #define OTP_IMAGE_SIZE(info)	(info & 0xffff)
@@ -157,6 +155,7 @@ struct otp_image_layout {
 	int data_length;
 	int conf_length;
 	int strap_length;
+	int scu_pro_length;
 	u8 *data;
 	u8 *data_ignore;
 	u8 *conf;
@@ -164,6 +163,8 @@ struct otp_image_layout {
 	u8 *strap;
 	u8 *strap_pro;
 	u8 *strap_ignore;
+	u8 *scu_pro;
+	u8 *scu_pro_ignore;
 };
 
 static struct otp_info_cb info_cb;
@@ -861,6 +862,56 @@ static void otp_print_revid(u32 *rid)
 	}
 }
 
+static int otp_print_scu_image(struct otp_image_layout *image_layout)
+{
+	const struct scu_info *scu_info = info_cb.scu_info;
+	u32 *OTPSCU = (u32 *)image_layout->scu_pro;
+	u32 *OTPSCU_IGNORE = (u32 *)image_layout->scu_pro_ignore;
+	int i;
+	u32 scu_offset;
+	u32 dw_offset;
+	u32 bit_offset;
+	u32 mask;
+	u32 otp_value;
+	u32 otp_ignore;
+
+	printf("SCU     BIT          reg_protect     Description\n");
+	printf("____________________________________________________________________\n");
+	for (i = 0; i < info_cb.scu_info_len; i++) {
+		mask = BIT(scu_info[i].length) - 1;
+
+		if (scu_info[i].bit_offset > 31) {
+			scu_offset = 0x510;
+			dw_offset = 1;
+			bit_offset = scu_info[i].bit_offset - 32;
+		} else {
+			scu_offset = 0x500;
+			dw_offset = 0;
+			bit_offset = scu_info[i].bit_offset;
+		}
+
+		otp_value = (OTPSCU[dw_offset] >> bit_offset) & mask;
+		otp_ignore = (OTPSCU_IGNORE[dw_offset] >> bit_offset) & mask;
+
+		if (otp_ignore == mask)
+			continue;
+		else if (otp_ignore != 0)
+			return OTP_FAILURE;
+
+		if (otp_value != 0 && otp_value != mask)
+			return OTP_FAILURE;
+
+		printf("0x%-6X", scu_offset);
+		if (scu_info[i].length == 1)
+			printf("0x%-11X", bit_offset);
+		else
+			printf("0x%-2X:0x%-4x", bit_offset, bit_offset + scu_info[i].length - 1);
+		printf("0x%-14X", otp_value);
+		printf("%s\n", scu_info[i].information);
+	}
+	return OTP_SUCCESS;
+}
+
 static void otp_print_scu_info(void)
 {
 	const struct scu_info *scu_info = info_cb.scu_info;
@@ -1531,6 +1582,61 @@ static int otp_prog_conf(struct otp_image_layout *image_layout, u32 *otp_conf)
 	return OTP_SUCCESS;
 }
 
+static int otp_prog_scu_protect(struct otp_image_layout *image_layout, u32 *scu_pro)
+{
+	int i, k;
+	int pass = 0;
+	u32 prog_address;
+	u32 compare[2];
+	u32 *OTPSCU = (u32 *)image_layout->scu_pro;
+	u32 *OTPSCU_IGNORE = (u32 *)image_layout->scu_pro_ignore;
+	u32 data_masked;
+	u32 buf_masked;
+
+	printf("Start Programing...\n");
+	otp_soak(0);
+	for (i = 0; i < 2; i++) {
+		data_masked = scu_pro[i]  & ~OTPSCU_IGNORE[i];
+		buf_masked  = OTPSCU[i] & ~OTPSCU_IGNORE[i];
+		prog_address = 0xe08 + i * 2;
+		if (data_masked == buf_masked) {
+			pass = 1;
+			continue;
+		}
+
+		otp_soak(1);
+		otp_prog_dw(OTPSCU[i], OTPSCU_IGNORE[i], prog_address);
+
+		pass = 0;
+		for (k = 0; k < RETRY; k++) {
+			if (verify_dw(prog_address, &OTPSCU[i], &OTPSCU_IGNORE[i], compare, 1) != 0) {
+				otp_soak(2);
+				otp_prog_dw(compare[0], OTPSCU_IGNORE[i], prog_address);
+				if (verify_dw(prog_address, &OTPSCU[i], &OTPSCU_IGNORE[i], compare, 1) != 0) {
+					otp_soak(1);
+				} else {
+					pass = 1;
+					break;
+				}
+			} else {
+				pass = 1;
+				break;
+			}
+		}
+		if (pass == 0) {
+			printf("OTPCFG0x%x: %08x, input: %08x, mask: %08x\n",
+			       i + 28, scu_pro[i], OTPSCU[i], OTPSCU_IGNORE[i]);
+			break;
+		}
+	}
+
+	otp_soak(0);
+	if (!pass)
+		return OTP_FAILURE;
+
+	return OTP_SUCCESS;
+}
+
 static int otp_check_data_image(struct otp_image_layout *image_layout, u32 *data)
 {
 	int data_dw;
@@ -1635,6 +1741,32 @@ static int otp_check_conf_image(struct otp_image_layout *image_layout, u32 *otp_
 	return OTP_SUCCESS;
 }
 
+static int otp_check_scu_image(struct otp_image_layout *image_layout, u32 *scu_pro)
+{
+	u32 *OTPSCU = (u32 *)image_layout->scu_pro;
+	u32 *OTPSCU_IGNORE = (u32 *)image_layout->scu_pro_ignore;
+	u32 data_masked;
+	u32 buf_masked;
+	int i;
+
+	for (i = 0; i < 2; i++) {
+		data_masked = scu_pro[i]  & ~OTPSCU_IGNORE[i];
+		buf_masked  = OTPSCU[i] & ~OTPSCU_IGNORE[i];
+		if (data_masked == buf_masked)
+			continue;
+		if ((data_masked | buf_masked) == buf_masked) {
+			continue;
+		} else {
+			printf("Input image can't program into OTP, please check.\n");
+			printf("OTPCFG[%X] = %x\n", 28 + i, scu_pro[i]);
+			printf("Input [%X] = %x\n", 28 + i, OTPSCU[i]);
+			printf("Mask  [%X] = %x\n", 28 + i, ~OTPSCU_IGNORE[i]);
+			return OTP_FAILURE;
+		}
+	}
+	return OTP_SUCCESS;
+}
+
 static int otp_verify_image(u8 *src_buf, u32 length, u8 *digest_buf)
 {
 	sha256_context ctx;
@@ -1661,6 +1793,7 @@ static int otp_prog_image(int addr, int nconfirm)
 	int i;
 	u32 data[2048];
 	u32 conf[16];
+	u32 scu_pro[2];
 	struct otpstrap_status otpstrap[64];
 
 	otp_header = map_physmem(addr, sizeof(struct otp_header), MAP_WRBACK);
@@ -1698,6 +1831,10 @@ static int otp_prog_image(int addr, int nconfirm)
 	image_layout.strap_length = (int)(OTP_REGION_SIZE(otp_header->strap_info) / 3);
 	image_layout.strap_pro = image_layout.strap + image_layout.strap_length;
 	image_layout.strap_ignore = image_layout.strap + 2 * image_layout.strap_length;
+
+	image_layout.scu_pro = buf + OTP_REGION_OFFSET(otp_header->scu_protect_info);
+	image_layout.scu_pro_length = (int)(OTP_REGION_SIZE(otp_header->scu_protect_info) / 2);
+	image_layout.scu_pro_ignore = image_layout.scu_pro + image_layout.scu_pro_length;
 
 	if (otp_header->soc_ver == SOC_AST2600A0) {
 		image_soc_ver = OTP_A0;
@@ -1774,6 +1911,19 @@ static int otp_prog_image(int addr, int nconfirm)
 		if (otp_check_strap_image(&image_layout, otpstrap) == OTP_FAILURE)
 			ret = -1;
 	}
+	if (otp_header->image_info & OTP_INC_SCU_PRO) {
+		if (info_cb.pro_sts.pro_strap) {
+			printf("OTP strap region is protected\n");
+			ret = -1;
+		}
+		printf("Read SCU Protect Region:\n");
+		otp_read_conf(28, &scu_pro[0]);
+		otp_read_conf(29, &scu_pro[1]);
+
+		printf("Check writable...\n");
+		if (otp_check_scu_image(&image_layout, scu_pro) == OTP_FAILURE)
+			ret = -1;
+	}
 	if (ret == -1)
 		return OTP_FAILURE;
 
@@ -1799,6 +1949,13 @@ static int otp_prog_image(int addr, int nconfirm)
 				return OTP_FAILURE;
 			}
 		}
+		if (otp_header->image_info & OTP_INC_SCU_PRO) {
+			printf("\nOTP scu protect region :\n");
+			if (otp_print_scu_image(&image_layout) < 0) {
+				printf("OTP scu protect error, please check.\n");
+				return OTP_FAILURE;
+			}
+		}
 
 		printf("type \"YES\" (no quotes) to continue:\n");
 		if (!confirm_yesno()) {
@@ -1819,6 +1976,15 @@ static int otp_prog_image(int addr, int nconfirm)
 	if (otp_header->image_info & OTP_INC_STRAP) {
 		printf("programing strap region ...\n");
 		ret = otp_prog_strap(&image_layout, otpstrap);
+		if (ret != 0) {
+			printf("Error\n");
+			return ret;
+		}
+		printf("Done\n");
+	}
+	if (otp_header->image_info & OTP_INC_SCU_PRO) {
+		printf("programing scu protect region ...\n");
+		ret = otp_prog_scu_protect(&image_layout, scu_pro);
 		if (ret != 0) {
 			printf("Error\n");
 			return ret;
