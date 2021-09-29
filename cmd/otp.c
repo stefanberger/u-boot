@@ -20,7 +20,7 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-#define OTP_VER				"1.1.0"
+#define OTP_VER				"1.2.0"
 
 #define OTP_PASSWD			0x349fe38a
 #define RETRY				20
