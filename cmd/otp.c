@@ -2207,6 +2207,68 @@ static int otp_update_rid(u32 update_num, int force)
 	return ret;
 }
 
+static int otp_retire_key(u32 retire_id, int force)
+{
+	u32 otpcfg4;
+	u32 krb;
+	u32 krb_b;
+	u32 krb_or;
+	u32 current_id;
+
+	otp_read_conf(4, &otpcfg4);
+	current_id = readl(SEC_KEY_NUM) & 7;
+	krb = otpcfg4 & 0xff;
+	krb_b = (otpcfg4 >> 16) & 0xff;
+	krb_or = krb | krb_b;
+
+	printf("current Key ID: 0x%x\n", current_id);
+	printf("input retire ID: 0x%x\n", retire_id);
+	printf("OTPCFG0x4 = 0x%X\n", otpcfg4);
+
+	if (info_cb.pro_sts.pro_key_ret) {
+		printf("OTPCFG4 is protected\n");
+		return OTP_FAILURE;
+	}
+
+	if (retire_id >= current_id) {
+		printf("Retire key id is equal or bigger than current boot key\n");
+		return OTP_FAILURE;
+	}
+
+	if (krb_or & (1 << retire_id)) {
+		printf("Key 0x%X already retired\n", retire_id);
+		return OTP_SUCCESS;
+	}
+
+	printf("OTPCFG0x4[0x%X] will be programmed\n", retire_id);
+	if (force == 0) {
+		printf("type \"YES\" (no quotes) to continue:\n");
+		if (!confirm_yesno()) {
+			printf(" Aborting\n");
+			return OTP_FAILURE;
+		}
+	}
+
+	if (otp_prog_dc_b(1, 0x808, retire_id) == OTP_FAILURE) {
+		printf("OTPCFG0x4[0x%X] programming failed\n", retire_id);
+		printf("try to program backup OTPCFG0x4[0x%X]\n", retire_id + 16);
+		if (otp_prog_dc_b(1, 0x808, retire_id + 16) == OTP_FAILURE)
+			printf("OTPCFG0x4[0x%X] programming failed", retire_id + 16);
+	}
+
+	otp_soak(0);
+	otp_read_conf(4, &otpcfg4);
+	krb = otpcfg4 & 0xff;
+	krb_b = (otpcfg4 >> 16) & 0xff;
+	krb_or = krb | krb_b;
+	if (krb_or & (1 << retire_id)) {
+		printf("SUCCESS\n");
+		return OTP_SUCCESS;
+	}
+	printf("FAILED\n");
+	return OTP_FAILURE;
+}
+
 static int do_otpread(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 {
 	u32 offset, count;
@@ -2679,6 +2741,32 @@ static int do_otprid(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 	return ret;
 }
 
+static int do_otpretire(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
+{
+	u32 retire_id;
+	int force = 0;
+	int ret;
+
+	if (argc == 3) {
+		if (strcmp(argv[1], "o"))
+			return CMD_RET_USAGE;
+		force = 1;
+		retire_id = simple_strtoul(argv[2], NULL, 16);
+	} else if (argc == 2) {
+		retire_id = simple_strtoul(argv[1], NULL, 16);
+	} else {
+		return CMD_RET_USAGE;
+	}
+
+	if (retire_id > 7)
+		return CMD_RET_USAGE;
+	ret = otp_retire_key(retire_id, force);
+
+	if (ret)
+		return CMD_RET_FAILURE;
+	return CMD_RET_SUCCESS;
+}
+
 static cmd_tbl_t cmd_otp[] = {
 	U_BOOT_CMD_MKENT(version, 1, 0, do_otpver, "", ""),
 	U_BOOT_CMD_MKENT(read, 4, 0, do_otpread, "", ""),
@@ -2690,6 +2778,7 @@ static cmd_tbl_t cmd_otp[] = {
 	U_BOOT_CMD_MKENT(cmp, 3, 0, do_otpcmp, "", ""),
 	U_BOOT_CMD_MKENT(update, 3, 0, do_otpupdate, "", ""),
 	U_BOOT_CMD_MKENT(rid, 1, 0, do_otprid, "", ""),
+	U_BOOT_CMD_MKENT(retire, 3, 0, do_otpretire, "", ""),
 };
 
 static int do_ast_otp(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
@@ -2797,4 +2886,5 @@ U_BOOT_CMD(otp, 7, 0,  do_ast_otp,
 	   "otp scuprotect [o] <scu_offset> <bit_offset>\n"
 	   "otp update [o] <revision_id>\n"
 	   "otp rid\n"
+	   "otp retire [o] <key_id>\n"
 	  );
