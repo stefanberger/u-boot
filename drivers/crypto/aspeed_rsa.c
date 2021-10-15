@@ -98,7 +98,8 @@ static int aspeed_mod_exp(struct udevice *dev, const uint8_t *sig, uint32_t sig_
 	/* polling RSA status */
 	while (1) {
 		reg = readl(ARCY_RSA_INT_STS);
-		if ((reg & ARCY_RSA_INT_STS_RSA_READY) && (reg & ARCY_RSA_INT_STS_RSA_CMPLT))
+		writel(reg, ARCY_RSA_INT_STS);
+		if (reg & ARCY_RSA_INT_STS_RSA_CMPLT)
 			break;
 		udelay(20);
 	}
@@ -113,6 +114,9 @@ static int aspeed_mod_exp(struct udevice *dev, const uint8_t *sig, uint32_t sig_
 		j++;
 		j = (j % 16) ? j : j + 32;
 	}
+
+	writel(0, ARCY_CTRL3);
+	free(ctx);
 
 	return 0;
 }
