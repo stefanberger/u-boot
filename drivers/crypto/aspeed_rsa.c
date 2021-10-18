@@ -84,7 +84,7 @@ static int aspeed_mod_exp(struct udevice *dev, const uint8_t *sig, uint32_t sig_
 	writel((u32)ctx, ARCY_DMA_DRAM_SADDR);
 
 	reg = (((prop->exp_len << 3) << ARCY_RSA_PARAM_EXP_SHIFT) & ARCY_RSA_PARAM_EXP_MASK) |
-		  ((prop->num_bits << ARCY_RSA_PARAM_MOD_SHIFT) & ARCY_RSA_PARAM_MOD_MASK);
+	      ((prop->num_bits << ARCY_RSA_PARAM_MOD_SHIFT) & ARCY_RSA_PARAM_MOD_MASK);
 	writel(reg, ARCY_RSA_PARAM);
 
 	reg = (ARCY_CTX_BUFSZ << ARCY_DMA_DMEM_TADDR_LEN_SHIFT) & ARCY_DMA_DMEM_TADDR_LEN_MASK;
@@ -98,9 +98,10 @@ static int aspeed_mod_exp(struct udevice *dev, const uint8_t *sig, uint32_t sig_
 	/* polling RSA status */
 	while (1) {
 		reg = readl(ARCY_RSA_INT_STS);
-		writel(reg, ARCY_RSA_INT_STS);
-		if (reg & ARCY_RSA_INT_STS_RSA_CMPLT)
+		if (reg & ARCY_RSA_INT_STS_RSA_CMPLT) {
+			writel(reg, ARCY_RSA_INT_STS);
 			break;
+		}
 		udelay(20);
 	}
 
