@@ -906,7 +906,7 @@ static int otp_print_scu_image(struct otp_image_layout *image_layout)
 		if (scu_info[i].length == 1)
 			printf("0x%-11X", bit_offset);
 		else
-			printf("0x%-2X:0x%-4x", bit_offset, bit_offset + scu_info[i].length - 1);
+			printf("0x%-2X:0x%-6x", bit_offset, bit_offset + scu_info[i].length - 1);
 		printf("0x%-14X", otp_value);
 		printf("%s\n", scu_info[i].information);
 	}
