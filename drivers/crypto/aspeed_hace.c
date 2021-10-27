@@ -238,6 +238,8 @@ int hw_sha_update(struct hash_algo *algo, void *hash_ctx, const void *buf,
 	if (remainder != 0) {
 		memcpy(ctx->buffer, buf + (total_len - ctx->bufcnt), remainder);
 		ctx->bufcnt = remainder;
+	} else {
+		ctx->bufcnt = 0;
 	}
 
 	return rc;
