@@ -878,6 +878,7 @@ static int aspeed_spi_flash_init(struct aspeed_spi_priv *priv,
 	int ret;
 	struct spi_flash *spi_flash = dev_get_uclass_priv(dev);
 	struct spi_slave *slave = dev_get_parent_priv(dev);
+	struct udevice *bus = dev->parent;
 	u32 read_hclk;
 
 	flash->spi = spi_flash;
@@ -976,9 +977,11 @@ static int aspeed_spi_flash_init(struct aspeed_spi_priv *priv,
 	 * Set the Read Timing Compensation Register. This setting
 	 * applies to all devices.
 	 */
-	ret = aspeed_spi_timing_calibration(priv);
-	if (ret != 0)
-		return ret;
+	if (!dev_read_bool(bus, "timing-calibration-disabled")) {
+		ret = aspeed_spi_timing_calibration(priv);
+		if (ret != 0)
+			return ret;
+	}
 
 	/* All done */
 	flash->init = true;
