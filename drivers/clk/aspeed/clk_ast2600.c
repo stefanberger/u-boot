@@ -462,6 +462,7 @@ static u32 ast2600_get_emmc_clk_rate(struct ast2600_scu *scu)
 
 static u32 ast2600_get_uart_clk_rate(struct ast2600_scu *scu, int uart_idx)
 {
+	u32 hicr9 = readl(0x1e789098);
 	u32 uart_sel = readl(&scu->clk_sel4);
 	u32 uart_sel5 = readl(&scu->clk_sel5);
 	ulong uart_clk = 0;
@@ -471,6 +472,8 @@ static u32 ast2600_get_uart_clk_rate(struct ast2600_scu *scu, int uart_idx)
 	case 2:
 	case 3:
 	case 4:
+		hicr9 &= ~(BIT(uart_idx + 3));
+		writel(hicr9, 0x1e789098);
 	case 6:
 		if (uart_sel & BIT(uart_idx - 1))
 			uart_clk = ast2600_get_uart_huxclk_rate(scu);
