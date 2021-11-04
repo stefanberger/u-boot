@@ -127,24 +127,24 @@
 		compatible = "spi-flash", "sst,w25q256";
 		status = "okay";
 		spi-max-frequency = <25000000>;
-		spi-tx-bus-width = <4>;
-		spi-rx-bus-width = <4>;
+		spi-tx-bus-width = <1>;
+		spi-rx-bus-width = <1>;
 	};
 
 	flash@1 {
 		compatible = "spi-flash", "sst,w25q256";
 		status = "okay";
 		spi-max-frequency = <25000000>;
-		spi-tx-bus-width = <4>;
-		spi-rx-bus-width = <4>;
+		spi-tx-bus-width = <1>;
+		spi-rx-bus-width = <1>;
 	};
 
 	flash@2 {
 		compatible = "spi-flash", "sst,w25q256";
 		status = "okay";
 		spi-max-frequency = <25000000>;
-		spi-tx-bus-width = <4>;
-		spi-rx-bus-width = <4>;
+		spi-tx-bus-width = <1>;
+		spi-rx-bus-width = <1>;
 	};
 };
 
@@ -161,16 +161,16 @@
 		compatible = "spi-flash", "sst,w25q256";
 		status = "okay";
 		spi-max-frequency = <25000000>;
-		spi-tx-bus-width = <4>;
-		spi-rx-bus-width = <4>;
+		spi-tx-bus-width = <1>;
+		spi-rx-bus-width = <1>;
 	};
 
 	flash@1 {
 		compatible = "spi-flash", "sst,w25q256";
 		status = "okay";
 		spi-max-frequency = <25000000>;
-		spi-tx-bus-width = <4>;
-		spi-rx-bus-width = <4>;
+		spi-tx-bus-width = <1>;
+		spi-rx-bus-width = <1>;
 	};
 };
 
@@ -186,24 +186,24 @@
 		compatible = "spi-flash", "sst,w25q256";
 		status = "okay";
 		spi-max-frequency = <25000000>;
-		spi-tx-bus-width = <4>;
-		spi-rx-bus-width = <4>;
+		spi-tx-bus-width = <1>;
+		spi-rx-bus-width = <1>;
 	};
 
 	flash@1 {
 		compatible = "spi-flash", "sst,w25q256";
 		status = "okay";
 		spi-max-frequency = <25000000>;
-		spi-tx-bus-width = <4>;
-		spi-rx-bus-width = <4>;
+		spi-tx-bus-width = <1>;
+		spi-rx-bus-width = <1>;
 	};
 
 	flash@2 {
 		compatible = "spi-flash", "sst,w25q256";
 		status = "okay";
 		spi-max-frequency = <25000000>;
-		spi-tx-bus-width = <4>;
-		spi-rx-bus-width = <4>;
+		spi-tx-bus-width = <1>;
+		spi-rx-bus-width = <1>;
 	};
 };
 
