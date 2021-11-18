@@ -10,6 +10,7 @@
 
 struct ast2600_clk_priv {
 	struct ast2600_scu *scu;
+	int dly32_lookup[2][32];
 };
 
 struct hw_strap {

@@ -6,6 +6,7 @@
 #include <common.h>
 #include <linux/bitfield.h>
 #include <linux/bitops.h>
+#include <linux/iopoll.h>
 #include <clk-uclass.h>
 #include <dm.h>
 #include <asm/io.h>
@@ -13,6 +14,14 @@
 #include <asm/arch/scu_ast2600.h>
 #include <dt-bindings/clock/ast2600-clock.h>
 #include <dt-bindings/reset/ast2600-reset.h>
+
+/*
+ * SCU 80 & 90 clock stop control for MAC controllers
+ */
+#define SCU_CLKSTOP_MAC1			(20)
+#define SCU_CLKSTOP_MAC2			(21)
+#define SCU_CLKSTOP_MAC3			(20)
+#define SCU_CLKSTOP_MAC4			(21)
 
 /*
  * MAC Clock Delay settings
@@ -46,6 +55,9 @@
 #define MAC_CLK_100M_10M_OUTPUT_DELAY_2		GENMASK(11, 6)
 #define MAC_CLK_100M_10M_OUTPUT_DELAY_1		GENMASK(5, 0)
 
+#define RGMII12_CLK_OUTPUT_DELAY_PS		1000
+#define RGMII34_CLK_OUTPUT_DELAY_PS		1600
+
 #define MAC_DEF_DELAY_1G			FIELD_PREP(MAC_CLK_1G_OUTPUT_DELAY_1, 16) |        \
 						FIELD_PREP(MAC_CLK_1G_INPUT_DELAY_1, 10) |         \
 						FIELD_PREP(MAC_CLK_1G_OUTPUT_DELAY_2, 16) |        \
@@ -70,6 +82,43 @@
 						FIELD_PREP(MAC_CLK_100M_10M_INPUT_DELAY_1, 4) |    \
 						FIELD_PREP(MAC_CLK_100M_10M_OUTPUT_DELAY_2, 8) |   \
 						FIELD_PREP(MAC_CLK_100M_10M_INPUT_DELAY_2, 4)
+
+/*
+ * SCU 320 & 330 Frequency counters
+ */
+#define FREQC_CTRL_RESERVED			GENMASK(31, 30)
+#define FREQC_CTRL_RESULT			GENMASK(29, 16)
+#define FREQC_CTRL_RING_STAGE			GENMASK(15, 9)
+#define FREQC_CTRL_PIN_O_CTRL			BIT(8)
+#define   FREQC_CTRL_PIN_O_DIS			0
+#define   FREQC_CTRL_PIN_O_EN			1
+#define FREQC_CTRL_CMP_RESULT			BIT(7)
+#define   FREQC_CTRL_CMP_RESULT_FAIL		0
+#define   FREQC_CTRL_CMP_RESULT_PASS		1
+#define FREQC_CTRL_STATUS			BIT(6)
+#define   FREQC_CTRL_STATUS_NOT_FINISHED	0
+#define   FREQC_CTRL_STATUS_FINISHED		1
+#define FREQC_CTRL_SRC_SEL			GENMASK(5, 2)
+#define   FREQC_CTRL_SRC_SEL_HCLK_DIE0		9
+#define   FREQC_CTRL_SRC_SEL_DLY32_DIE0		3
+#define   FREQC_CTRL_SRC_SEL_HCLK_DIE1		1
+#define   FREQC_CTRL_SRC_SEL_DLY32_DIE1		7
+#define FREQC_CTRL_OSC_CTRL			BIT(1)
+#define   FREQC_CTRL_OSC_DIS			0
+#define   FREQC_CTRL_OSC_EN			1
+#define FREQC_CTRL_RING_CTRL			BIT(0)
+#define   FREQC_CTRL_RING_DIS			0
+#define   FREQC_CTRL_RING_EN			1
+
+#define FREQC_RANGE_RESERVED0			GENMASK(31, 30)
+#define FREQC_RANGE_LOWER			GENMASK(29, 16)
+#define FREQC_RANGE_RESERVED1			GENMASK(15, 14)
+#define FREQC_RANGE_UPPER			GENMASK(13, 0)
+
+#define DLY32_NUM_OF_TAPS			32
+#define DLY32_AVERAGE_COUNT_LOG2		4
+#define DLY32_AVERAGE_COUNT			BIT(DLY32_AVERAGE_COUNT_LOG2)
+
 /*
  * TGMII Clock Duty constants, taken from Aspeed SDK
  */
@@ -707,13 +756,105 @@ static ulong ast2600_clk_set_rate(struct clk *clk, ulong rate)
 	return new_rate;
 }
 
-#define SCU_CLKSTOP_MAC1	(20)
-#define SCU_CLKSTOP_MAC2	(21)
-#define SCU_CLKSTOP_MAC3	(20)
-#define SCU_CLKSTOP_MAC4	(21)
-
-static u32 ast2600_configure_mac12_clk(struct ast2600_scu *scu, struct udevice *dev)
+static int ast2600_calc_dly32_time(struct ast2600_scu *scu, int die_id, int stage)
 {
+	int ret, i;
+	u64 sum = 0;
+	u32 base, value, reset_sel, dly32_sel;
+
+	if (die_id) {
+		base = (u32)&scu->freq_counter_ctrl2;
+		reset_sel = FREQC_CTRL_SRC_SEL_HCLK_DIE1;
+		dly32_sel = FREQC_CTRL_SRC_SEL_DLY32_DIE1;
+	} else {
+		base = (u32)&scu->freq_counter_ctrl1;
+		reset_sel = FREQC_CTRL_SRC_SEL_HCLK_DIE0;
+		dly32_sel = FREQC_CTRL_SRC_SEL_DLY32_DIE0;
+	}
+
+	for (i = 0; i < DLY32_AVERAGE_COUNT; i++) {
+		/* reset frequency-counter */
+		writel(FIELD_PREP(FREQC_CTRL_SRC_SEL, reset_sel), base);
+		ret = readl_poll_timeout(base, value, !(value & FREQC_CTRL_RESULT), 1000);
+		if (ret)
+			return -1;
+
+		/* start frequency counter */
+		value = FIELD_PREP(FREQC_CTRL_RING_STAGE, stage)
+		      | FIELD_PREP(FREQC_CTRL_SRC_SEL, dly32_sel)
+		      | FIELD_PREP(FREQC_CTRL_RING_CTRL, FREQC_CTRL_RING_EN);
+		writel(value, base);
+
+		/* delay for a while for settling down */
+		udelay(100);
+
+		/* enable osc for measurement */
+		value |= FIELD_PREP(FREQC_CTRL_OSC_CTRL, FREQC_CTRL_OSC_EN);
+		writel(value, base);
+		ret = readl_poll_timeout(base, value, value & FREQC_CTRL_STATUS, 1000);
+		if (ret)
+			return -1;
+
+		/* the result is represented in T count, will translate to pico-second later */
+		sum += FIELD_GET(FREQC_CTRL_RESULT, value);
+	}
+
+	/* return the DLY32 value in pico-second */
+	return (2560000 / (int)(sum >> DLY32_AVERAGE_COUNT_LOG2));
+}
+
+static void ast2600_init_dly32_lookup(struct ast2600_clk_priv *priv)
+{
+	struct ast2600_scu *scu = priv->scu;
+	int i;
+
+	for (i = 0; i < DLY32_NUM_OF_TAPS; i++) {
+		priv->dly32_lookup[0][i] = ast2600_calc_dly32_time(scu, 0, i);
+		priv->dly32_lookup[1][i] = ast2600_calc_dly32_time(scu, 1, i);
+	}
+
+#ifdef DEBUG
+	for (i = 0; i < DLY32_NUM_OF_TAPS; i++)
+		printf("28nm DLY32[%d] = %d ps\n", i, priv->dly32_lookup[0][i]);
+
+	for (i = 0; i < DLY32_NUM_OF_TAPS; i++)
+		printf("55nm DLY32[%d] = %d ps\n", i, priv->dly32_lookup[1][i]);
+#endif
+}
+
+/**
+ * @brief find the DLY32 tap number fitting the target delay time
+ *
+ * @param target_pico_sec target delay time in pico-second
+ * @param lookup DLY32 lookup table
+ * @return int DLY32 tap number
+ */
+static int ast2600_find_dly32_tap(int target_pico_sec, int *lookup)
+{
+	int tap = DLY32_NUM_OF_TAPS >> 1;
+	int lower = 0;
+	int upper = DLY32_NUM_OF_TAPS - 1;
+
+	/* binary search for the proper delay tap */
+	for (;;) {
+		if (tap == 0 || tap == DLY32_NUM_OF_TAPS - 1)
+			return -1;
+
+		if (lookup[tap] >= target_pico_sec && lookup[tap - 1] < target_pico_sec) {
+			return tap;
+		} else if (lookup[tap] > target_pico_sec) {
+			upper = tap;
+			tap = (tap + lower) >> 1;
+		} else if (lookup[tap] < target_pico_sec) {
+			lower = tap;
+			tap = (tap + upper) >> 1;
+		}
+	}
+}
+
+static u32 ast2600_configure_mac12_clk(struct ast2600_clk_priv *priv, struct udevice *dev)
+{
+	struct ast2600_scu *scu = priv->scu;
 	struct mac_delay_config mac1_cfg, mac2_cfg;
 	u32 reg[3];
 	int ret;
@@ -722,6 +863,20 @@ static u32 ast2600_configure_mac12_clk(struct ast2600_scu *scu, struct udevice *
 	reg[1] = MAC_DEF_DELAY_100M;
 	reg[2] = MAC_DEF_DELAY_10M;
 
+	ret = ast2600_find_dly32_tap(RGMII12_CLK_OUTPUT_DELAY_PS, priv->dly32_lookup[0]);
+	if (ret > 0) {
+		debug("suggested tx delay for mac1/2: %d\n", ret);
+
+		reg[0] &= ~(MAC_CLK_1G_OUTPUT_DELAY_1 | MAC_CLK_1G_OUTPUT_DELAY_2);
+		reg[0] |= FIELD_PREP(MAC_CLK_1G_OUTPUT_DELAY_1, ret) |
+			  FIELD_PREP(MAC_CLK_1G_OUTPUT_DELAY_2, ret);
+		reg[1] &= ~(MAC_CLK_100M_10M_OUTPUT_DELAY_1 | MAC_CLK_100M_10M_OUTPUT_DELAY_2);
+		reg[1] |= FIELD_PREP(MAC_CLK_100M_10M_OUTPUT_DELAY_1, ret) |
+			  FIELD_PREP(MAC_CLK_100M_10M_OUTPUT_DELAY_2, ret);
+		reg[2] &= ~(MAC_CLK_100M_10M_OUTPUT_DELAY_1 | MAC_CLK_100M_10M_OUTPUT_DELAY_2);
+		reg[2] |= FIELD_PREP(MAC_CLK_100M_10M_OUTPUT_DELAY_1, ret) |
+			  FIELD_PREP(MAC_CLK_100M_10M_OUTPUT_DELAY_2, ret);
+	}
 	ret = dev_read_u32_array(dev, "mac0-clk-delay", (u32 *)&mac1_cfg,
 				 sizeof(mac1_cfg) / sizeof(u32));
 	if (!ret) {
@@ -765,8 +920,9 @@ static u32 ast2600_configure_mac12_clk(struct ast2600_scu *scu, struct udevice *
 	return 0;
 }
 
-static u32 ast2600_configure_mac34_clk(struct ast2600_scu *scu, struct udevice *dev)
+static u32 ast2600_configure_mac34_clk(struct ast2600_clk_priv *priv, struct udevice *dev)
 {
+	struct ast2600_scu *scu = priv->scu;
 	struct mac_delay_config mac3_cfg, mac4_cfg;
 	u32 reg[3];
 	int ret;
@@ -774,6 +930,21 @@ static u32 ast2600_configure_mac34_clk(struct ast2600_scu *scu, struct udevice *
 	reg[0] = MAC34_DEF_DELAY_1G;
 	reg[1] = MAC34_DEF_DELAY_100M;
 	reg[2] = MAC34_DEF_DELAY_10M;
+
+	ret = ast2600_find_dly32_tap(RGMII34_CLK_OUTPUT_DELAY_PS, priv->dly32_lookup[1]);
+	if (ret > 0) {
+		debug("suggested tx delay for mac3/4: %d\n", ret);
+
+		reg[0] &= ~(MAC_CLK_1G_OUTPUT_DELAY_1 | MAC_CLK_1G_OUTPUT_DELAY_2);
+		reg[0] |= FIELD_PREP(MAC_CLK_1G_OUTPUT_DELAY_1, ret) |
+			  FIELD_PREP(MAC_CLK_1G_OUTPUT_DELAY_2, ret);
+		reg[1] &= ~(MAC_CLK_100M_10M_OUTPUT_DELAY_1 | MAC_CLK_100M_10M_OUTPUT_DELAY_2);
+		reg[1] |= FIELD_PREP(MAC_CLK_100M_10M_OUTPUT_DELAY_1, ret) |
+			  FIELD_PREP(MAC_CLK_100M_10M_OUTPUT_DELAY_2, ret);
+		reg[2] &= ~(MAC_CLK_100M_10M_OUTPUT_DELAY_1 | MAC_CLK_100M_10M_OUTPUT_DELAY_2);
+		reg[2] |= FIELD_PREP(MAC_CLK_100M_10M_OUTPUT_DELAY_1, ret) |
+			  FIELD_PREP(MAC_CLK_100M_10M_OUTPUT_DELAY_2, ret);
+	}
 
 	ret = dev_read_u32_array(dev, "mac2-clk-delay", (u32 *)&mac3_cfg, sizeof(mac3_cfg) / sizeof(u32));
 	if (!ret) {
@@ -1360,8 +1531,9 @@ static int ast2600_clk_probe(struct udevice *dev)
 
 	ast2600_init_rgmii_clk(priv->scu, &rgmii_clk_defconfig);
 	ast2600_init_rmii_clk(priv->scu, &rmii_clk_defconfig);
-	ast2600_configure_mac12_clk(priv->scu, dev);
-	ast2600_configure_mac34_clk(priv->scu, dev);
+	ast2600_init_dly32_lookup(priv);
+	ast2600_configure_mac12_clk(priv, dev);
+	ast2600_configure_mac34_clk(priv, dev);
 	ast2600_configure_rsa_ecc_clk(priv->scu);
 
 	return 0;
