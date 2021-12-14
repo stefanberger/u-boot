@@ -128,7 +128,7 @@ uint16_t phy_read (MAC_ENGINE *eng, int index)
 	}
 
 	if (eng->env.is_new_mdio_reg[eng->run.mdio_idx]) {
-		writel(MDIO_RD_CODE | MDIO_SET_PHY_ADDR_OLD(eng->phy.Adr) |
+		writel(MDIO_RD_CODE | MDIO_SET_PHY_ADDR(eng->phy.Adr) |
 			       MDIO_SET_REG_ADDR(index),
 		       eng->run.mdio_base);
 
