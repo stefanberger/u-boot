@@ -831,25 +831,20 @@ static void ast2600_init_dly32_lookup(struct ast2600_clk_priv *priv)
  */
 static int ast2600_find_dly32_tap(int target_pico_sec, int *lookup)
 {
-	int tap = DLY32_NUM_OF_TAPS >> 1;
-	int lower = 0;
-	int upper = DLY32_NUM_OF_TAPS - 1;
+	int i;
+	bool found = false;
 
-	/* binary search for the proper delay tap */
-	for (;;) {
-		if (tap == 0 || tap == DLY32_NUM_OF_TAPS - 1)
-			return -1;
-
-		if (lookup[tap] >= target_pico_sec && lookup[tap - 1] < target_pico_sec) {
-			return tap;
-		} else if (lookup[tap] > target_pico_sec) {
-			upper = tap;
-			tap = (tap + lower) >> 1;
-		} else if (lookup[tap] < target_pico_sec) {
-			lower = tap;
-			tap = (tap + upper) >> 1;
+	for (i = 0; i < DLY32_NUM_OF_TAPS; i++) {
+		if (lookup[i] >= target_pico_sec) {
+			found = true;
+			break;
 		}
 	}
+
+	if (!found)
+		return -1;
+
+	return lookup[i];
 }
 
 static u32 ast2600_configure_mac12_clk(struct ast2600_clk_priv *priv, struct udevice *dev)
