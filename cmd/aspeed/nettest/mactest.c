@@ -529,6 +529,9 @@ void scu_enable_mac(MAC_ENGINE *p_eng)
 	SCU_WR(reg, p_mac->base_clk_start);
 	/* issue a dummy read to ensure command is in order */
 	reg = SCU_RD(p_mac->base_clk_start);
+
+	/* deassert MDIO reset */
+	SCU_WR(BIT(3), 0x54);
 #else
 	reg = SCU_RD(p_mac->base_reset_assert);
 	debug("reset reg: 0x%08x\n", reg);
