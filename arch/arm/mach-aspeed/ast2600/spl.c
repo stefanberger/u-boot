@@ -24,8 +24,10 @@ void aspeed_mmc_init(void);
 void board_init_f(ulong dummy)
 {
 #ifndef CONFIG_SPL_TINY
+	struct udevice *dev;
 	spl_early_init();
 	timer_init();
+	uclass_get_device(UCLASS_PINCTRL, 0, &dev);
 	preloader_console_init();
 	dram_init();
 	aspeed_mmc_init();

@@ -278,7 +278,7 @@ static struct aspeed_sig_desc spi1cs1_link[] = {
 static struct aspeed_sig_desc spi1wp_link[] = {
 	{ 0x438, BIT(10), 0 },
 };
-	
+
 static struct aspeed_sig_desc spi1quad_link[] = {
 	{ 0x438, GENMASK(15, 14), 0 },
 };
@@ -329,6 +329,38 @@ static struct aspeed_sig_desc pcie0rc_link[] = {
 static struct aspeed_sig_desc pcie1rc_link[] = {
 	{ 0x40, BIT(19), 0 },	//SSPRST# output enable 
 	{ 0x500, BIT(24), 0 },	//dedicate rc reset
+};
+
+static struct aspeed_sig_desc txd1_link[] = {
+	{ 0x41c, BIT(6), 0 },
+};
+
+static struct aspeed_sig_desc rxd1_link[] = {
+	{ 0x41c, BIT(7), 0 },
+};
+
+static struct aspeed_sig_desc txd2_link[] = {
+	{ 0x41c, BIT(14), 0 },
+};
+
+static struct aspeed_sig_desc rxd2_link[] = {
+	{ 0x41c, BIT(15), 0 },
+};
+
+static struct aspeed_sig_desc txd3_link[] = {
+	{ 0x418, BIT(28), 0 },
+};
+
+static struct aspeed_sig_desc rxd3_link[] = {
+	{ 0x418, BIT(29), 0 },
+};
+
+static struct aspeed_sig_desc txd4_link[] = {
+	{ 0x410, BIT(14), 0 },
+};
+
+static struct aspeed_sig_desc rxd4_link[] = {
+	{ 0x410, BIT(15), 0 },
 };
 
 static const struct aspeed_group_config ast2600_groups[] = {
@@ -389,7 +421,16 @@ static const struct aspeed_group_config ast2600_groups[] = {
 	{ "USB2AH", ARRAY_SIZE(usb2ah_link), usb2ah_link },
 	{ "USB2BH", ARRAY_SIZE(usb2bh_link), usb2bh_link },
 	{ "PCIE0RC", ARRAY_SIZE(pcie0rc_link), pcie0rc_link },
-	{ "PCIE1RC", ARRAY_SIZE(pcie1rc_link), pcie1rc_link },	
+	{ "PCIE1RC", ARRAY_SIZE(pcie1rc_link), pcie1rc_link },
+	{ "TXD1", ARRAY_SIZE(txd1_link), txd1_link },
+	{ "RXD1", ARRAY_SIZE(rxd1_link), rxd1_link },
+	{ "TXD2", ARRAY_SIZE(txd2_link), txd2_link },
+	{ "RXD2", ARRAY_SIZE(rxd2_link), rxd2_link },
+	{ "TXD3", ARRAY_SIZE(txd3_link), txd3_link },
+	{ "RXD3", ARRAY_SIZE(rxd3_link), rxd3_link },
+	{ "TXD4", ARRAY_SIZE(txd4_link), txd4_link },
+	{ "RXD4", ARRAY_SIZE(rxd4_link), rxd4_link },
+
 };
 
 static int ast2600_pinctrl_get_groups_count(struct udevice *dev)

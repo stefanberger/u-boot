@@ -275,6 +275,7 @@
 			#address-cells = <1>;
 			#size-cells = <1>;
 			ranges;
+			u-boot,dm-pre-reloc;
 
 			syscon: syscon@1e6e2000 {
 				compatible = "aspeed,g6-scu", "syscon", "simple-mfd";
@@ -284,11 +285,12 @@
 				#clock-cells = <1>;
 				#reset-cells = <1>;
 				ranges = <0 0x1e6e2000 0x1000>;
+				u-boot,dm-pre-reloc;
 
 				pinctrl: pinctrl {
 					compatible = "aspeed,g6-pinctrl";
 					aspeed,external-nodes = <&gfx &lhc>;
-
+					u-boot,dm-pre-reloc;
 				};
 
 				vga_scratch: scratch {
@@ -485,7 +487,10 @@
 				clocks = <&scu ASPEED_CLK_GATE_UART1CLK>;
 				clock-frequency = <1846154>;
 				no-loopback-test;
-				status = "disabled";	
+				u-boot,dm-pre-reloc;
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_txd1_default &pinctrl_rxd1_default>;
+				status = "disabled";
 			};
 
 			uart5: serial@1e784000 {
@@ -496,6 +501,7 @@
 				clocks = <&scu ASPEED_CLK_GATE_UART5CLK>;
 				clock-frequency = <1846154>;
 				no-loopback-test;
+				u-boot,dm-pre-reloc;
 				status = "disabled";
 			};
 
@@ -636,6 +642,9 @@
 				clocks = <&scu ASPEED_CLK_GATE_UART2CLK>;
 				clock-frequency = <1846154>;
 				no-loopback-test;
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_txd2_default &pinctrl_rxd2_default>;
+				u-boot,dm-pre-reloc;
 				status = "disabled";
 			};
 
@@ -647,6 +656,9 @@
 				clocks = <&scu ASPEED_CLK_GATE_UART3CLK>;
 				clock-frequency = <1846154>;
 				no-loopback-test;
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_txd3_default &pinctrl_rxd3_default>;
+				u-boot,dm-pre-reloc;
 				status = "disabled";
 			};
 
@@ -658,6 +670,9 @@
 				clocks = <&scu ASPEED_CLK_GATE_UART4CLK>;
 				clock-frequency = <1846154>;
 				no-loopback-test;
+				u-boot,dm-pre-reloc;
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_txd4_default &pinctrl_rxd4_default>;
 				status = "disabled";
 			};
 
@@ -1004,6 +1019,8 @@
 };
 
 &pinctrl {
+	u-boot,dm-pre-reloc;
+
 	pinctrl_fmcquad_default: fmcquad_default {
 		function = "FMCQUAD";
 		groups = "FMCQUAD";
@@ -1382,7 +1399,7 @@
 		function = "MAC4LINK";
 		groups = "MAC4LINK";
 	};
-		
+
 	pinctrl_mdio1_default: mdio1_default {
 		function = "MDIO1";
 		groups = "MDIO1";
@@ -1651,21 +1668,25 @@
 	pinctrl_rxd1_default: rxd1_default {
 		function = "RXD1";
 		groups = "RXD1";
+		u-boot,dm-pre-reloc;
 	};
 
 	pinctrl_rxd2_default: rxd2_default {
 		function = "RXD2";
 		groups = "RXD2";
+		u-boot,dm-pre-reloc;
 	};
 
 	pinctrl_rxd3_default: rxd3_default {
 		function = "RXD3";
 		groups = "RXD3";
+		u-boot,dm-pre-reloc;
 	};
 
 	pinctrl_rxd4_default: rxd4_default {
 		function = "RXD4";
 		groups = "RXD4";
+		u-boot,dm-pre-reloc;
 	};
 
 	pinctrl_salt1_default: salt1_default {
@@ -1906,21 +1927,25 @@
 	pinctrl_txd1_default: txd1_default {
 		function = "TXD1";
 		groups = "TXD1";
+		u-boot,dm-pre-reloc;
 	};
 
 	pinctrl_txd2_default: txd2_default {
 		function = "TXD2";
 		groups = "TXD2";
+		u-boot,dm-pre-reloc;
 	};
 
 	pinctrl_txd3_default: txd3_default {
 		function = "TXD3";
 		groups = "TXD3";
+		u-boot,dm-pre-reloc;
 	};
 
 	pinctrl_txd4_default: txd4_default {
 		function = "TXD4";
 		groups = "TXD4";
+		u-boot,dm-pre-reloc;
 	};
 
 	pinctrl_uart6_default: uart6_default {
