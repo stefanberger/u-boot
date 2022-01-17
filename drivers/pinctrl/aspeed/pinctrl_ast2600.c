@@ -323,7 +323,8 @@ static struct aspeed_sig_desc usb2bh_link[] = {
 };
 
 static struct aspeed_sig_desc pcie0rc_link[] = {
-	{ 0x40, BIT(21), 0 },	
+	{ 0x40, BIT(21), 0 },
+	{ 0xC8, BIT(6), 1 },	//enable ep for as Root Complex
 };
 
 static struct aspeed_sig_desc pcie1rc_link[] = {
