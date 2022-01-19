@@ -16,6 +16,79 @@ struct pcie_aspeed {
 
 static u8 txTag;
 
+void aspeed_pcie_set_slot_power_limit(struct pcie_aspeed *pcie, int slot)
+{
+	u32 timeout = 0;
+	struct aspeed_h2x_reg *h2x_reg = pcie->h2x_reg;
+
+	//optional : set_slot_power_limit
+	switch (slot) {
+	case 0:
+		writel(BIT(4) | readl(&h2x_reg->h2x_rc_l_ctrl),
+		       &h2x_reg->h2x_rc_l_ctrl);
+		break;
+	case 1:
+		writel(BIT(4) | readl(&h2x_reg->h2x_rc_h_ctrl),
+		       &h2x_reg->h2x_rc_h_ctrl);
+		break;
+	}
+
+	txTag %= 0x7;
+
+	writel(0x74000001, &h2x_reg->h2x_tx_desc3);
+	switch (slot) {
+	case 0:	//write for 0.8.0
+		writel(0x00400050 | (txTag << 8), &h2x_reg->h2x_tx_desc2);
+		break;
+	case 1:	//write for 0.4.0
+		writel(0x00200050 | (txTag << 8), &h2x_reg->h2x_tx_desc2);
+		break;
+	}
+	writel(0x0, &h2x_reg->h2x_tx_desc1);
+	writel(0x0, &h2x_reg->h2x_tx_desc0);
+
+	writel(0x1a, &h2x_reg->h2x_tx_data);
+
+	//trigger tx
+	writel(PCIE_TRIGGER_TX, &h2x_reg->h2x_reg24);
+
+	//wait tx idle
+	while (!(readl(&h2x_reg->h2x_reg24) & BIT(31))) {
+		timeout++;
+		if (timeout > 1000)
+			goto out;
+	};
+
+	//write clr tx idle
+	writel(1, &h2x_reg->h2x_reg08);
+	timeout = 0;
+
+	switch (slot) {
+	case 0:
+		//check tx status and clr rx done int
+		while (!(readl(&h2x_reg->h2x_rc_l_isr) & PCIE_RC_RX_DONE_ISR)) {
+			timeout++;
+			if (timeout > 10)
+				break;
+			mdelay(1);
+		}
+		writel(PCIE_RC_RX_DONE_ISR, &h2x_reg->h2x_rc_l_isr);
+		break;
+	case 1:
+		//check tx status and clr rx done int
+		while (!(readl(&h2x_reg->h2x_rc_h_isr) & PCIE_RC_RX_DONE_ISR)) {
+			timeout++;
+			if (timeout > 10)
+				break;
+			mdelay(1);
+		}
+		writel(PCIE_RC_RX_DONE_ISR, &h2x_reg->h2x_rc_h_isr);
+		break;
+	}
+out:
+	txTag++;
+}
+
 static void aspeed_pcie_cfg_read(struct pcie_aspeed *pcie, pci_dev_t bdf,
 				 uint offset, ulong *valuep)
 {
@@ -276,77 +349,6 @@ static int pcie_aspeed_write_config(struct udevice *bus, pci_dev_t bdf,
 	aspeed_pcie_cfg_write(pcie, bdf, offset, value, size);
 
 	return 0;
-}
-
-void aspeed_pcie_set_slot_power_limit(struct pcie_aspeed *pcie, int slot)
-{
-	u32 timeout = 0;
-	struct aspeed_h2x_reg *h2x_reg = pcie->h2x_reg;
-
-	//optional : set_slot_power_limit
-	switch (slot) {
-	case 0:
-		writel(BIT(4) | readl(&h2x_reg->h2x_rc_l_ctrl),
-		       &h2x_reg->h2x_rc_l_ctrl);
-		break;
-	case 1:
-		writel(BIT(4) | readl(&h2x_reg->h2x_rc_h_ctrl),
-		       &h2x_reg->h2x_rc_h_ctrl);
-		break;
-	}
-
-	writel(0x74000001, &h2x_reg->h2x_tx_desc3);
-
-	switch (slot) {
-	case 0:	//write for 0.8.0
-		writel(0x00400050, &h2x_reg->h2x_tx_desc2);
-		break;
-	case 1:	//write for 0.4.0
-		writel(0x00200050, &h2x_reg->h2x_tx_desc2);
-		break;
-	}
-
-	writel(0x0, &h2x_reg->h2x_tx_desc1);
-	writel(0x0, &h2x_reg->h2x_tx_desc0);
-
-	writel(0x1a, &h2x_reg->h2x_tx_data);
-
-	//trigger tx
-	writel(PCIE_TRIGGER_TX, &h2x_reg->h2x_reg24);
-
-	//wait tx idle
-	while (!(readl(&h2x_reg->h2x_reg24) & BIT(31))) {
-		timeout++;
-		if (timeout > 1000)
-			return;
-	};
-
-	//write clr tx idle
-	writel(1, &h2x_reg->h2x_reg08);
-	timeout = 0;
-
-	switch (slot) {
-	case 0:
-		//check tx status and clr rx done int
-		while (!(readl(&h2x_reg->h2x_rc_l_isr) & PCIE_RC_RX_DONE_ISR)) {
-			timeout++;
-			if (timeout > 10)
-				break;
-			mdelay(1);
-		}
-		writel(PCIE_RC_RX_DONE_ISR, &h2x_reg->h2x_rc_l_isr);
-		break;
-	case 1:
-		//check tx status and clr rx done int
-		while (!(readl(&h2x_reg->h2x_rc_h_isr) & PCIE_RC_RX_DONE_ISR)) {
-			timeout++;
-			if (timeout > 10)
-				break;
-			mdelay(1);
-		}
-		writel(PCIE_RC_RX_DONE_ISR, &h2x_reg->h2x_rc_h_isr);
-		break;
-	}
 }
 
 void aspeed_pcie_rc_slot_enable(struct pcie_aspeed *pcie, int slot)
