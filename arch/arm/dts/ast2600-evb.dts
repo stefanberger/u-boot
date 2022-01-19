@@ -276,12 +276,6 @@
 	pinctrl-0 = <&pinctrl_i2c9_default>;
 };
 
-#if 0
-&pcie_rc_bridge0 {
-	status = "okay";
-};
-#endif
-
 &pcie_rc_bridge1 {
 	status = "okay";
 };
