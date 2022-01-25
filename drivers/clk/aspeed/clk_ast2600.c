@@ -522,12 +522,67 @@ static u32 ast2600_get_emmc_clk_rate(struct ast2600_scu *scu)
 	return (clkin / div);
 }
 
+#ifdef CONFIG_SPL_BUILD
+static void ast2600_enable_uart_pinmux(struct ast2600_scu *scu, int uart_idx)
+{
+	switch(uart_idx) {
+	case 1:
+		scu->pinmux_ctrl7 |= (BIT(7) | BIT(6));
+		break;
+	case 2:
+		scu->pinmux_ctrl7 |= (BIT(14) | BIT(15));
+		break;
+	case 3:
+		scu->pinmux_ctrl6 |= (BIT(28) | BIT(29));
+		break;
+	case 4:
+		scu->pinmux_ctrl4 |= (BIT(14) | BIT(15));
+		break;
+	case 5:
+		/* do nothgin */
+		break;
+	case 6:
+		scu->pinmux_ctrl5 |= (BIT(16) | BIT(17));
+		break;
+	case 7:
+		scu->pinmux_ctrl5 |= (BIT(18) | BIT(19));
+		break;
+	case 8:
+		scu->pinmux_ctrl5 |= (BIT(20) | BIT(21));
+		break;
+	case 9:
+		scu->pinmux_ctrl5 |= (BIT(22) | BIT(23));
+		break;
+	case 10:
+		scu->pinmux_ctrl8 |= (BIT(20) | BIT(21));
+		break;
+	case 11:
+		scu->pinmux_ctrl8 |= (BIT(22) | BIT(23));
+		break;
+	case 12:
+		scu->pinmux_ctrl19 |= (BIT(0) | BIT(1));
+		scu->pinmux_ctrl6 &= ~(BIT(0) | BIT(1));
+		break;
+	case 13:
+		scu->pinmux_ctrl19 |= (BIT(2) | BIT(3));
+		scu->pinmux_ctrl6 &= ~(BIT(2) | BIT(3));
+		break;
+	default:
+		break;
+	}
+}
+#endif
+
 static u32 ast2600_get_uart_clk_rate(struct ast2600_scu *scu, int uart_idx)
 {
 	u32 hicr9 = readl(0x1e789098);
 	u32 uart_sel = readl(&scu->clk_sel4);
 	u32 uart_sel5 = readl(&scu->clk_sel5);
 	ulong uart_clk = 0;
+
+#ifdef CONFIG_SPL_BUILD
+	ast2600_enable_uart_pinmux(scu, uart_idx);
+#endif
 
 	switch (uart_idx) {
 	case 1:
