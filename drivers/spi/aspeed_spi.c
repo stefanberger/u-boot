@@ -125,10 +125,10 @@ struct aspeed_spi_regs {
 #define SEGMENT_ADDR_VALUE(start, end)					\
 	(((((start) >> 23) & 0xff) << 16) | ((((end) >> 23) & 0xff) << 24))
 
-#define G6_SEGMENT_ADDR_START(reg)		(reg & 0xffff)
-#define G6_SEGMENT_ADDR_END(reg)		((reg >> 16) & 0xffff)
+#define G6_SEGMENT_ADDR_START(reg)		(((reg) << 16) & 0x0ff00000)
+#define G6_SEGMENT_ADDR_END(reg)		(((reg) & 0x0ff00000) + 0x100000)
 #define G6_SEGMENT_ADDR_VALUE(start, end)					\
-	((((start) >> 16) & 0xffff) | (((end) - 0x100000) & 0xffff0000))
+	((((start) & 0x0ff00000) >> 16) | (((end) - 0x100000) & 0xffff0000))
 
 /* DMA Control/Status Register */
 #define DMA_CTRL_DELAY_SHIFT		8
@@ -497,27 +497,26 @@ static int aspeed_spi_controller_init(struct aspeed_spi_priv *priv)
 	if (priv->new_ver) {
 		for (cs = 0; cs < priv->flash_count; cs++) {
 			struct aspeed_spi_flash *flash = &priv->flashes[cs];
-			u32 seg_addr = readl(&priv->regs->segment_addr[cs]);
 			u32 addr_config = 0;
 			switch(cs) {
-				case 0:
-					flash->ahb_base = cs ? (void *)G6_SEGMENT_ADDR_START(seg_addr) :
-						priv->ahb_base;
-					debug("cs0 mem-map : %x \n", (u32)flash->ahb_base);
-					break;
-				case 1:
-					flash->ahb_base = priv->flashes[0].ahb_base + 0x8000000;	//cs0 + 128Mb : use 64MB
-					debug("cs1 mem-map : %x end %x \n", (u32)flash->ahb_base, (u32)flash->ahb_base + 0x4000000);
-					addr_config = G6_SEGMENT_ADDR_VALUE((u32)flash->ahb_base, (u32)flash->ahb_base + 0x4000000); //add 512Mb
-					writel(addr_config, &priv->regs->segment_addr[cs]);
-					break;
-				case 2:
-					flash->ahb_base = priv->flashes[0].ahb_base + 0xc000000;	//cs0 + 192Mb : use 64MB
-					debug("cs2 mem-map : %x end %x \n", (u32)flash->ahb_base, (u32)flash->ahb_base + 0x4000000);
-					addr_config = G6_SEGMENT_ADDR_VALUE((u32)flash->ahb_base, (u32)flash->ahb_base + 0x4000000); //add 512Mb
-					writel(addr_config, &priv->regs->segment_addr[cs]);
-					break;
+			case 0:
+				flash->ahb_base = priv->ahb_base;
+				debug("cs0 mem-map : %x\n", (u32)flash->ahb_base);
+				break;
+			case 1:
+				flash->ahb_base = priv->flashes[0].ahb_base + 0x4000000; /* cs0 + 64MB */
+				debug("cs1 mem-map : %x end %x\n",
+				      (u32)flash->ahb_base, (u32)flash->ahb_base + 0x4000000);
+				break;
+			case 2:
+				flash->ahb_base = priv->flashes[0].ahb_base + 0x4000000 * 2; /* cs0 + 128MB : use 64MB */
+				debug("cs2 mem-map : %x end %x\n",
+				      (u32)flash->ahb_base, (u32)flash->ahb_base + 0x4000000);
+				break;
 			}
+			addr_config =
+				G6_SEGMENT_ADDR_VALUE((u32)flash->ahb_base, (u32)flash->ahb_base + 0x4000000);
+			writel(addr_config, &priv->regs->segment_addr[cs]);
 			flash->cs = cs;
 			flash->ce_ctrl_user = CE_CTRL_USERMODE;
 			flash->ce_ctrl_fread = CE_CTRL_READMODE;
@@ -642,8 +641,6 @@ static void aspeed_spi_send_cmd_addr(struct aspeed_spi_priv *priv,
 				     const u8 *cmdbuf, unsigned int cmdlen, uint32_t flag)
 {
 	int i;
-	u8 byte0 = 0x0;
-	u8 addrlen = cmdlen - 1;
 
 	/* First, send the opcode */
 	aspeed_spi_write_to_ahb(flash->ahb_base, &cmdbuf[0], 1);
@@ -652,14 +649,6 @@ static void aspeed_spi_send_cmd_addr(struct aspeed_spi_priv *priv,
 		writel(flash->ce_ctrl_user | flash->write_iomode, &priv->regs->ce_ctrl[flash->cs]);
 	else if(flash->read_iomode == CE_CTRL_IO_QUAD_ADDR_DATA && (flag & SPI_READ_FROM_FLASH))
 		writel(flash->ce_ctrl_user | flash->read_iomode, &priv->regs->ce_ctrl[flash->cs]);
-
-	/*
-	 * The controller is configured for 4BYTE address mode. Fix
-	 * the address width and send an extra byte if the SPI Flash
-	 * layer uses 3 bytes addresses.
-	 */
-	if (addrlen == 3 && readl(&priv->regs->ctrl) & BIT(flash->cs))
-		aspeed_spi_write_to_ahb(flash->ahb_base, &byte0, 1);
 
 	/* Then the address */
 	for (i = 1 ; i < cmdlen; i++)
@@ -671,16 +660,16 @@ static ssize_t aspeed_spi_read_user(struct aspeed_spi_priv *priv,
 				    unsigned int cmdlen, const u8 *cmdbuf,
 				    unsigned int len, u8 *read_buf)
 {
-	u8 dummy = 0xff;
+	u8 dummy = 0x00;
 	int i;
 
 	aspeed_spi_start_user(priv, flash);
 
 	/* cmd buffer = cmd + addr + dummies */
 	aspeed_spi_send_cmd_addr(priv, flash, cmdbuf,
-				 cmdlen - (flash->spi->read_dummy/8), SPI_READ_FROM_FLASH);
+				 cmdlen - (flash->spi->read_dummy / 8), SPI_READ_FROM_FLASH);
 
-	for (i = 0 ; i < (flash->spi->read_dummy/8); i++)
+	for (i = 0; i < (flash->spi->read_dummy / 8); i++)
 		aspeed_spi_write_to_ahb(flash->ahb_base, &dummy, 1);
 
 	if (flash->read_iomode) {
@@ -688,6 +677,30 @@ static ssize_t aspeed_spi_read_user(struct aspeed_spi_priv *priv,
 			     CE_CTRL_IO_MODE_MASK);
 		setbits_le32(&priv->regs->ce_ctrl[flash->cs], flash->read_iomode);
 	}
+
+	aspeed_spi_read_from_ahb(flash->ahb_base, read_buf, len);
+	aspeed_spi_stop_user(priv, flash);
+
+	return 0;
+}
+
+static ssize_t aspeed_spi_read_sfdp(struct aspeed_spi_priv *priv,
+				    struct aspeed_spi_flash *flash,
+				    unsigned int cmdlen, const u8 *cmdbuf,
+				    unsigned int len, u8 *read_buf)
+{
+	u8 dummy = 0x00;
+	int i;
+
+	/* only 1-1-1 mode is used to read SFDP */
+	aspeed_spi_start_user(priv, flash);
+
+	/* cmd buffer = cmd + addr + dummies */
+	aspeed_spi_send_cmd_addr(priv, flash, cmdbuf,
+				 cmdlen - (flash->spi->read_dummy / 8), 0);
+
+	for (i = 0; i < (flash->spi->read_dummy / 8); i++)
+		aspeed_spi_write_to_ahb(flash->ahb_base, &dummy, 1);
 
 	aspeed_spi_read_from_ahb(flash->ahb_base, read_buf, len);
 	aspeed_spi_stop_user(priv, flash);
@@ -744,10 +757,11 @@ static ssize_t aspeed_spi_read(struct aspeed_spi_priv *priv,
 
 	/*
 	 * Switch to USER command mode:
+	 * - if read SFDP content.
 	 * - if the AHB window configured for the device is
 	 *   too small for the read operation
 	 * - if read offset is smaller than the decoded start address
-	 *   and the decoded range is not multiple of flash size
+	 *   and the decoded range is not multiple of flash size.
 	 */
 	if ((offset + len >= flash->ahb_size) || \
 		(offset < ((int)flash->ahb_base & 0x0FFFFFFF) && \
@@ -798,25 +812,32 @@ static int aspeed_spi_xfer(struct udevice *dev, unsigned int bitlen,
 		}
 
 		if (din && data_bytes) {
-			if (priv->cmd_len == 1)
+			if (priv->cmd_len == 1) {
 				err = aspeed_spi_read_reg(priv, flash,
 							  cmd_buf[0],
 							  din, data_bytes);
-			else
+			} else if (cmd_buf[0] == SPINOR_OP_RDSFDP) {
+				err = aspeed_spi_read_sfdp(priv, flash,
+							   priv->cmd_len,
+							   cmd_buf, data_bytes,
+							   din);
+			} else {
 				err = aspeed_spi_read(priv, flash,
 						      priv->cmd_len,
 						      cmd_buf, data_bytes,
 						      din);
+			}
 		} else if (dout) {
-			if (priv->cmd_len == 1)
+			if (priv->cmd_len == 1) {
 				err = aspeed_spi_write_reg(priv, flash,
 							   cmd_buf[0],
 							   dout, data_bytes);
-			else
+			} else {
 				err = aspeed_spi_write_user(priv, flash,
 							    priv->cmd_len,
 							    cmd_buf, data_bytes,
 							    dout);
+			}
 		}
 
 		if (flags & SPI_XFER_END) {
@@ -843,6 +864,27 @@ static int aspeed_spi_child_pre_probe(struct udevice *dev)
 }
 
 /*
+ * AST2600 SPI memory controllers support multiple chip selects.
+ * The start address of a decode range should be multiple
+ * of its related flash size. Namely, the total decoded size
+ * from flash 0 to flash N should be multiple of (N + 1) flash size.
+ */
+void aspeed_g6_adjust_decode_sz(u32 decode_sz_arr[], int len)
+{
+	int cs, j;
+	u32 sz;
+
+	for (cs = len - 1; cs >= 0; cs--) {
+		sz = 0;
+		for (j = 0; j < cs; j++)
+			sz += decode_sz_arr[j];
+
+		if (sz % decode_sz_arr[cs] != 0)
+			decode_sz_arr[0] += (sz % decode_sz_arr[cs]);
+	}
+}
+
+/*
  * It is possible to automatically define a contiguous address space
  * on top of all CEs in the AHB window of the controller but it would
  * require much more work. Let's start with a simple mapping scheme
@@ -855,18 +897,58 @@ static int aspeed_spi_flash_set_segment(struct aspeed_spi_priv *priv,
 					struct aspeed_spi_flash *flash)
 {
 	u32 seg_addr;
+	u32 decode_sz_arr[ASPEED_SPI_MAX_CS];
+	u32 reg_val;
+	u32 cs;
+	u32 total_decode_sz = 0;
+	u32 cur_offset = 0;
 
 	/* could be configured through the device tree */
 	flash->ahb_size = flash->spi->size;
 
 	if (priv->new_ver) {
-		seg_addr = G6_SEGMENT_ADDR_VALUE((u32)flash->ahb_base,
-					      (u32)flash->ahb_base + flash->ahb_size);
+		for (cs = 0; cs < ASPEED_SPI_MAX_CS; cs++) {
+			reg_val = readl(&priv->regs->segment_addr[cs]);
+			if (G6_SEGMENT_ADDR_END(reg_val) > G6_SEGMENT_ADDR_START(reg_val)) {
+				decode_sz_arr[cs] =
+					G6_SEGMENT_ADDR_END(reg_val) - G6_SEGMENT_ADDR_START(reg_val);
+			} else {
+				decode_sz_arr[cs] = 0;
+			}
+		}
+
+		decode_sz_arr[flash->cs] = flash->ahb_size;
+		aspeed_g6_adjust_decode_sz(decode_sz_arr, flash->cs + 1);
+
+		for (cs = 0; cs < ASPEED_SPI_MAX_CS; cs++)
+			total_decode_sz += decode_sz_arr[cs];
+
+		if (total_decode_sz > priv->ahb_size) {
+			printf("err: Total decoded size is too large.\n");
+			return -ENOMEM;
+		}
+
+		for (cs = 0; cs < ASPEED_SPI_MAX_CS; cs++) {
+			struct aspeed_spi_flash *flash = &priv->flashes[cs];
+
+			flash->ahb_base = (void __iomem *)((u32)priv->ahb_base + cur_offset);
+
+			if (decode_sz_arr[cs] != 0) {
+				seg_addr = G6_SEGMENT_ADDR_VALUE((u32)flash->ahb_base,
+								 (u32)flash->ahb_base + decode_sz_arr[cs]);
+			} else {
+				seg_addr = 0;
+			}
+
+			writel(seg_addr, &priv->regs->segment_addr[cs]);
+			flash->ahb_size = decode_sz_arr[cs];
+			cur_offset += decode_sz_arr[cs];
+		}
 	} else {
 		seg_addr = SEGMENT_ADDR_VALUE((u32)flash->ahb_base,
 						  (u32)flash->ahb_base + flash->ahb_size);
+		writel(seg_addr, &priv->regs->segment_addr[flash->cs]);
 	}
-	writel(seg_addr, &priv->regs->segment_addr[flash->cs]);
 
 	return 0;
 }
@@ -971,7 +1053,9 @@ static int aspeed_spi_flash_init(struct aspeed_spi_priv *priv,
 	writel(flash->ce_ctrl_fread, &priv->regs->ce_ctrl[flash->cs]);
 
 	/* Set Address Segment Register for direct AHB accesses */
-	aspeed_spi_flash_set_segment(priv, flash);
+	ret = aspeed_spi_flash_set_segment(priv, flash);
+	if (ret != 0)
+		return ret;
 
 	/*
 	 * Set the Read Timing Compensation Register. This setting
