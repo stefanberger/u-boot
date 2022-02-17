@@ -1274,7 +1274,7 @@ static int aspeed_spi_probe(struct udevice *bus)
 		return ret;
 
 	priv->ahb_base = (void __iomem *)res_ahb.start;
-	priv->ahb_size = res_ahb.end - res_ahb.start;
+	priv->ahb_size = res_ahb.end - res_ahb.start + 1;
 
 	ret = clk_get_by_index(bus, 0, &hclk);
 	if (ret < 0) {
