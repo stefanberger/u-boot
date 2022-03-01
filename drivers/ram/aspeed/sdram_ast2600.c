@@ -303,17 +303,13 @@ static int ast2600_sdramphy_check_status(struct dram_info *info)
 	tmp = (((value & GENMASK(15, 8)) >> 8) * 100) / 255;
 	debug("    B1:%d%%\n", tmp);
 
-	/* read Vref training result */
+	/* read Vref (PHY side) training result */
 	value = readl(reg_base + 0x88);
 	debug("rO_DDRPHY_reg offset 0x88 = 0x%08x\n", value);
 
-	/* write Vref training result */
+	/* write Vref (DRAM side) training result */
 	value = readl(reg_base + 0x90);
 	debug("rO_DDRPHY_reg offset 0x90 = 0x%08x\n", value);
-#if 0
-	tmp = (((value & GENMASK(5, 0)) >> 0) * 100) / 127;
-        debug("  write Vref training result = %d%%\n", tmp);
-#endif
 
 	/* gate train */
 	value = readl(reg_base + 0x50);
