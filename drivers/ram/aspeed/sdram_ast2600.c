@@ -430,7 +430,7 @@ static int ast2600_sdrammc_test(struct dram_info *info)
 	while (finish == false) {
 		pattern = as2600_sdrammc_test_pattern[i++];
 		i = i % MC_TEST_PATTERN_N;
-		debug("  pattern = %08X : ", pattern);
+		debug("  pattern = %08x : ", pattern);
 		writel(pattern, &regs->test_init_val);
 
 		if (!ast2600_sdrammc_cbr_test(info)) {
