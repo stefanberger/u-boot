@@ -90,6 +90,7 @@
 #define DDR4_MR45_MODE		0x04C00000
 #define DDR4_MR6_MODE		0x00000050
 #define DDR4_TRFC_FPGA		0x17263434
+#define DDR4_TRFI		0x5d
 
 /* FPGA need for an additional initialization procedure: search read window */
 #define SEARCH_RDWIN_ANCHOR_0   (CONFIG_SYS_SDRAM_BASE + 0x0000)
@@ -107,6 +108,21 @@
 #define DDR4_TRFC_1333		0x3a5f80c9
 #define DDR4_TRFC_800		0x23394c78
 #define DDR4_TRFC_400		0x111c263c
+/*
+ * tRFI calculation
+ * DDR4 spec. :
+ * tRFI = 7.8 us if temperature is Less/equal than 85 degree celsius
+ * tRFI = 3.9 us if temperature is greater than 85 degree celsius
+ *
+ * tRFI in MCR0C = floor(tRFI * 12.5M) - margin
+ * normal temp. -> floor(7.8 * 12.5) - 2 = 0x5f
+ * high temp. -> floor(3.9 * 12.5) - 1 = 0x2f
+ */
+#ifdef CONFIG_ASPEED_HI_TEMP_TRFI
+#define DDR4_TRFI		0x2f	/* High temperature tRFI */
+#else
+#define DDR4_TRFI		0x5f	/* Normal temperature tRFI */
+#endif /* end of "#ifdef CONFIG_ASPEED_HI_TEMP_TRFI" */
 #endif /* end of "#if defined(CONFIG_FPGA_ASPEED) ||                           \
 	  defined(CONFIG_ASPEED_PALLADIUM)" */
 
@@ -689,16 +705,9 @@ static int ast2600_sdrammc_init_ddr4(struct dram_info *info)
 	writel(MCR30_SET_MR(0) | MCR30_RESET_DLL_DELAY_EN,
 	       &info->regs->mode_setting_control);
 
-#if defined(CONFIG_FPGA_ASPEED) || defined(CONFIG_ASPEED_PALLADIUM)
-
 	writel(SDRAM_REFRESH_EN | SDRAM_RESET_DLL_ZQCL_EN |
-		       (0x5d << SDRAM_REFRESH_PERIOD_SHIFT),
+		       (DDR4_TRFI << SDRAM_REFRESH_PERIOD_SHIFT),
 	       &info->regs->refresh_timing);
-#else
-	writel(SDRAM_REFRESH_EN | SDRAM_RESET_DLL_ZQCL_EN |
-		       (0x5f << SDRAM_REFRESH_PERIOD_SHIFT),
-	       &info->regs->refresh_timing);
-#endif
 
 	/* wait self-refresh idle */
 	while (readl(&info->regs->power_ctrl) & MCR34_SELF_REFRESH_STATUS_MASK)
@@ -707,13 +716,13 @@ static int ast2600_sdrammc_init_ddr4(struct dram_info *info)
 #if defined(CONFIG_FPGA_ASPEED) || defined(CONFIG_ASPEED_PALLADIUM)
 	writel(SDRAM_REFRESH_EN | SDRAM_LOW_PRI_REFRESH_EN |
 		       SDRAM_REFRESH_ZQCS_EN |
-		       (0x5d << SDRAM_REFRESH_PERIOD_SHIFT) |
+		       (DDR4_TRFI << SDRAM_REFRESH_PERIOD_SHIFT) |
 		       (0x4000 << SDRAM_REFRESH_PERIOD_ZQCS_SHIFT),
 	       &info->regs->refresh_timing);
 #else
 	writel(SDRAM_REFRESH_EN | SDRAM_LOW_PRI_REFRESH_EN |
 		       SDRAM_REFRESH_ZQCS_EN |
-		       (0x5f << SDRAM_REFRESH_PERIOD_SHIFT) |
+		       (DDR4_TRFI << SDRAM_REFRESH_PERIOD_SHIFT) |
 		       (0x42aa << SDRAM_REFRESH_PERIOD_ZQCS_SHIFT),
 	       &info->regs->refresh_timing);
 #endif
