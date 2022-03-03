@@ -900,7 +900,8 @@ static int ast2600_sdrammc_probe(struct udevice *dev)
 		return PTR_ERR(priv->scu);
 	}
 
-	if (readl(priv->scu + AST_SCU_HANDSHAKE) & SCU_SDRAM_INIT_READY_MASK) {
+	reg = readl(priv->scu + AST_SCU_HANDSHAKE);
+	if (reg & SCU_SDRAM_INIT_READY_MASK) {
 		printf("already initialized, ");
 		setbits_le32(priv->scu + AST_SCU_HANDSHAKE, SCU_HANDSHAKE_MASK);
 		ast2600_sdrammc_update_size(priv);
@@ -957,7 +958,8 @@ L_ast2600_sdramphy_train:
 	} while (reg == 0);
 #endif
 
-	if (0 != ast2600_sdramphy_check_status(priv)) {
+	ret = ast2600_sdramphy_check_status(priv);
+	if (ret) {
 		printf("DDR4 PHY training fail, retrain\n");
 		goto L_ast2600_sdramphy_train;
 	}
@@ -965,7 +967,8 @@ L_ast2600_sdramphy_train:
 	ast2600_sdrammc_calc_size(priv);
 
 #ifndef CONFIG_ASPEED_BYPASS_SELFTEST
-        if (0 != ast2600_sdrammc_test(priv)) {
+	ret = ast2600_sdrammc_test(priv);
+	if (ret) {
 		printf("%s: DDR4 init fail\n", __func__);
 		return -EINVAL;
 	}
