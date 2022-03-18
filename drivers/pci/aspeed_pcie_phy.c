@@ -37,7 +37,7 @@ DECLARE_GLOBAL_DATA_PTR;
 #define PCIE_LINK_5G			BIT(17)
 #define PCIE_LINK_2_5G			BIT(16)
 
-extern int aspeed_rc_bridge_link_status(struct udevice *dev)
+extern int aspeed_pcie_phy_link_status(struct udevice *dev)
 {
 	struct aspeed_rc_bridge *rc_bridge = dev_get_priv(dev);
 	u32 pcie_link = readl(rc_bridge->reg + ASPEED_PCIE_LINK);
@@ -59,7 +59,7 @@ extern int aspeed_rc_bridge_link_status(struct udevice *dev)
 	return ret;
 }
 
-static int aspeed_rc_bridge_probe(struct udevice *dev)
+static int aspeed_pcie_phy_probe(struct udevice *dev)
 {
 	struct reset_ctl reset_ctl;
 	int ret = 0;
@@ -89,16 +89,16 @@ static int aspeed_rc_bridge_probe(struct udevice *dev)
 	return 0;
 }
 
-static const struct udevice_id aspeed_rc_bridge_ids[] = {
-	{ .compatible = "aspeed,ast2600-rc_bridge" },
+static const struct udevice_id aspeed_pcie_phy_ids[] = {
+	{ .compatible = "aspeed,ast2600-pcie_phy" },
 	{ }
 };
 
 U_BOOT_DRIVER(aspeed_rc_bridge) = {
-	.name		= "aspeed_rc_bridge",
+	.name		= "aspeed_pcie_phy",
 	.id			= UCLASS_MISC,
-	.of_match	= aspeed_rc_bridge_ids,
-	.probe		= aspeed_rc_bridge_probe,
+	.of_match	= aspeed_pcie_phy_ids,
+	.probe		= aspeed_pcie_phy_probe,
 	.priv_auto_alloc_size	= sizeof(struct aspeed_rc_bridge),
 };
 
