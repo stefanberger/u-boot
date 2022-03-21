@@ -376,7 +376,7 @@ static u32 ast2600_get_bclk_rate(struct ast2600_scu *scu)
 	u32 rate;
 	u32 bclk_sel = (readl(&scu->clk_sel1) >> 20) & 0x7;
 
-	rate = ast2600_get_pll_rate(scu, ASPEED_CLK_HPLL);
+	rate = ast2600_get_pll_rate(scu, ASPEED_CLK_EPLL);
 
 	return (rate / ((bclk_sel + 1) * 4));
 }
