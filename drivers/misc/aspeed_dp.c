@@ -12,6 +12,8 @@
 #include <asm/io.h>
 #include "dp_mcu_firmware.h"
 
+#define USE_SI2C
+
 struct aspeed_dp_priv {
 	void *ctrl_base;
 };
@@ -21,6 +23,7 @@ static int aspeed_dp_probe(struct udevice *dev)
 	struct aspeed_dp_priv *dp = dev_get_priv(dev);
 	struct reset_ctl dp_reset_ctl, dpmcu_reset_ctrl;
 	int i, ret = 0;
+	int i2c_port = -1;
 
 	/* Get the controller base address */
 	dp->ctrl_base = (void *)devfdt_get_addr_index(dev, 0);
@@ -61,6 +64,51 @@ static int aspeed_dp_probe(struct udevice *dev)
 
 	for (i = 0; i < ARRAY_SIZE(firmware_ast2600_dp); i++)
 		writel(firmware_ast2600_dp[i], 0x18020000 + (i * 4));
+
+	// update configs for re-driver
+	i2c_port = dev_read_s32_default(dev, "i2c-port", -1);
+	if (i2c_port == -1) {
+		printf("%s(): Failed to get dp i2c_port for re-driver\n", __func__);
+		writel(0xdeadbeef, 0x18000e00);
+	} else {
+		const u32 *cell;
+		u32 i2c_base;
+		u32 dev_addr = -1;
+		int len, i;
+
+		dev_addr = dev_read_s32_default(dev, "dev-addr", -1);
+		if (dev_addr == -1)
+			dev_addr = 0x70;
+		debug("%s(): i2c_port(%d) for re-driver(%#x)\n", __func__, i2c_port, dev_addr);
+
+		writel(0xcafe, 0x18000e00);
+		cell = dev_read_prop(dev, "eq-table", &len);
+		for (i = 0; i < len / sizeof(u32); ++i)
+			writel(fdt32_to_cpu(cell[i]), 0x18000e04 + i * 4);
+#ifdef USE_SI2C
+		i2c_port %= 4;
+		i2c_base = 0x1e7a8000;
+#else
+		i2c_base = 0x1e78a000;
+#endif
+		writel(i2c_base + 0x80 + 0x80 * i2c_port, 0x18000e28);
+		writel(i2c_base + 0xc00 + 0x20 * i2c_port, 0x18000e2c);
+		writel(dev_addr, 0x18000e30);
+
+		// i2c global init
+		writel(0x16, i2c_base + 0x0c);
+		writel(0x041230C6, i2c_base + 0x10);
+
+		// i2c port init
+		i2c_base = i2c_base + 0x80 + 0x80 * i2c_port;
+		writel(0x0, i2c_base);
+		mdelay(1);
+		writel(0x28001, i2c_base);
+		writel(0x344001, i2c_base + 0x04);
+		writel(0xFFFFFFFF, i2c_base + 0x14);
+		writel(0x0, i2c_base + 0x10);
+		mdelay(10);
+	}
 
 	/* release DPMCU internal reset */
 	writel(0x10000010, 0x180100e0);
