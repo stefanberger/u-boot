@@ -899,7 +899,7 @@ static int ast2600_find_dly32_tap(int target_pico_sec, int *lookup)
 	if (!found)
 		return -1;
 
-	return lookup[i];
+	return i;
 }
 
 static u32 ast2600_configure_mac12_clk(struct ast2600_clk_priv *priv, struct udevice *dev)
@@ -915,7 +915,7 @@ static u32 ast2600_configure_mac12_clk(struct ast2600_clk_priv *priv, struct ude
 
 	ret = ast2600_find_dly32_tap(RGMII12_CLK_OUTPUT_DELAY_PS, priv->dly32_lookup[0]);
 	if (ret > 0) {
-		debug("suggested tx delay for mac1/2: %d\n", ret);
+		debug("suggested tx delay for mac1/2: %d\n", priv->dly32_lookup[0][ret]);
 
 		reg[0] &= ~(MAC_CLK_1G_OUTPUT_DELAY_1 | MAC_CLK_1G_OUTPUT_DELAY_2);
 		reg[0] |= FIELD_PREP(MAC_CLK_1G_OUTPUT_DELAY_1, ret) |
@@ -983,7 +983,7 @@ static u32 ast2600_configure_mac34_clk(struct ast2600_clk_priv *priv, struct ude
 
 	ret = ast2600_find_dly32_tap(RGMII34_CLK_OUTPUT_DELAY_PS, priv->dly32_lookup[1]);
 	if (ret > 0) {
-		debug("suggested tx delay for mac3/4: %d\n", ret);
+		debug("suggested tx delay for mac3/4: %d\n", priv->dly32_lookup[1][ret]);
 
 		reg[0] &= ~(MAC_CLK_1G_OUTPUT_DELAY_1 | MAC_CLK_1G_OUTPUT_DELAY_2);
 		reg[0] |= FIELD_PREP(MAC_CLK_1G_OUTPUT_DELAY_1, ret) |
