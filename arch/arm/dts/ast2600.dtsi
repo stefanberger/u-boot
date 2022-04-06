@@ -328,7 +328,8 @@
 
 			acry: acry@1e6fa000 {
 				compatible = "aspeed,ast2600-acry";
-				reg = <0x1e6fa000 0x1000>;
+				reg = <0x1e6fa000 0x1000>,
+				      <0x1e710000 0x20000>;
 				interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&scu ASPEED_CLK_GATE_RSAECCCLK>;
 				clock-names = "rsaeccclk";
