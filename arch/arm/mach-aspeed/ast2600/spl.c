@@ -45,13 +45,6 @@ void spl_board_init(void)
 					&dev)) {
 		debug("Warning: HACE initialization failure\n");
 	}
-
-	if (IS_ENABLED(CONFIG_ASPEED_ACRY) &&
-	    uclass_get_device_by_driver(UCLASS_MISC,
-					DM_GET_DRIVER(aspeed_acry),
-					&dev)) {
-		debug("Warning: ACRY initialization failure\n");
-	}
 }
 #endif
 

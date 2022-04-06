@@ -8,4 +8,3 @@ obj-y += rsa_mod_exp/
 obj-y += fsl/
 obj-$(CONFIG_ASPEED_HACE) += aspeed_hace.o
 obj-$(CONFIG_ASPEED_ACRY) += aspeed_acry.o
-obj-$(CONFIG_RSA_ASPEED_EXP) += aspeed_rsa.o
