@@ -184,6 +184,7 @@ U_BOOT_DRIVER(aspeed_acry) = {
 	.of_match = aspeed_acry_ids,
 	.probe = aspeed_acry_probe,
 	.remove = aspeed_acry_remove,
+	.priv_auto_alloc_size = sizeof(struct aspeed_acry),
 	.ops = &aspeed_acry_ops,
 	.flags = DM_FLAG_PRE_RELOC,
 };
