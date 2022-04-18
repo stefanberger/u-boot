@@ -16,4 +16,8 @@ config CMD_PECITEST
 config CMD_PLLTEST
 	bool "ASPEED PLL test"
 	default n
+
+config CMD_DPTEST
+        bool "ASPEED DP controller CTS"
+        default y
 endmenu
