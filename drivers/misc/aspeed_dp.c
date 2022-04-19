@@ -3,6 +3,7 @@
  * Copyright (C) ASPEED Technology Inc.
  */
 
+#include <linux/bitfield.h>
 #include <common.h>
 #include <clk.h>
 #include <dm.h>
@@ -12,7 +13,26 @@
 #include <asm/io.h>
 #include "dp_mcu_firmware.h"
 
-#define USE_SI2C
+#define MCU_CTRL                        0x180100e0
+#define  MCU_CTRL_AHBS_IMEM_EN          BIT(0)
+#define  MCU_CTRL_AHBS_SW_RST           BIT(4)
+#define  MCU_CTRL_AHBM_SW_RST           BIT(8)
+#define  MCU_CTRL_CORE_SW_RST           BIT(12)
+#define  MCU_CTRL_DMEM_SHUT_DOWN        BIT(16)
+#define  MCU_CTRL_DMEM_SLEEP            BIT(17)
+#define  MCU_CTRL_DMEM_CLK_OFF          BIT(18)
+#define  MCU_CTRL_IMEM_SHUT_DOWN        BIT(20)
+#define  MCU_CTRL_IMEM_SLEEP            BIT(21)
+#define  MCU_CTRL_IMEM_CLK_OFF          BIT(22)
+#define  MCU_CTRL_IMEM_SEL              BIT(24)
+#define  MCU_CTRL_CONFIG                BIT(28)
+
+#define MCU_INTR_CTRL                   0x180100e8
+#define  MCU_INTR_CTRL_CLR              GENMASK(7, 0)
+#define  MCU_INTR_CTRL_MASK             GENMASK(15, 8)
+#define  MCU_INTR_CTRL_EN               GENMASK(23, 16)
+
+#define MCU_IMEM_START                  0x18020000
 
 struct aspeed_dp_priv {
 	void *ctrl_base;
@@ -22,8 +42,9 @@ static int aspeed_dp_probe(struct udevice *dev)
 {
 	struct aspeed_dp_priv *dp = dev_get_priv(dev);
 	struct reset_ctl dp_reset_ctl, dpmcu_reset_ctrl;
-	int i, ret = 0;
-	int i2c_port = -1;
+	int i, ret = 0, len;
+	const u32 *cell;
+	u32 tmp, mcu_ctrl;
 
 	/* Get the controller base address */
 	dp->ctrl_base = (void *)devfdt_get_addr_index(dev, 0);
@@ -57,64 +78,61 @@ static int aspeed_dp_probe(struct udevice *dev)
 	writel(0, 0x18000de0);
 	
 	/* load DPMCU firmware to internal instruction memory */
-	writel(0x10550010, 0x180100e0);
-	writel(0x10440010, 0x180100e0);
-	writel(0x10000010, 0x180100e0);
-	writel(0x10000011, 0x180100e0);
+	mcu_ctrl = MCU_CTRL_CONFIG | MCU_CTRL_IMEM_CLK_OFF | MCU_CTRL_IMEM_SHUT_DOWN |
+	      MCU_CTRL_DMEM_CLK_OFF | MCU_CTRL_DMEM_SHUT_DOWN | MCU_CTRL_AHBS_SW_RST;
+	writel(mcu_ctrl, MCU_CTRL);
+
+	mcu_ctrl &= ~(MCU_CTRL_IMEM_SHUT_DOWN | MCU_CTRL_DMEM_SHUT_DOWN);
+	writel(mcu_ctrl, MCU_CTRL);
+
+	mcu_ctrl &= ~(MCU_CTRL_IMEM_CLK_OFF | MCU_CTRL_DMEM_CLK_OFF);
+	writel(mcu_ctrl, MCU_CTRL);
+
+	mcu_ctrl |= MCU_CTRL_AHBS_IMEM_EN;
+	writel(mcu_ctrl, MCU_CTRL);
 
 	for (i = 0; i < ARRAY_SIZE(firmware_ast2600_dp); i++)
-		writel(firmware_ast2600_dp[i], 0x18020000 + (i * 4));
+		writel(firmware_ast2600_dp[i], MCU_IMEM_START + (i * 4));
 
-	// update configs for re-driver
-	i2c_port = dev_read_s32_default(dev, "i2c-port", -1);
-	if (i2c_port == -1) {
-		printf("%s(): Failed to get dp i2c_port for re-driver\n", __func__);
-		writel(0xdeadbeef, 0x18000e00);
-	} else {
-		const u32 *cell;
-		u32 i2c_base;
-		u32 dev_addr = -1;
-		int len, i;
-
-		dev_addr = dev_read_s32_default(dev, "dev-addr", -1);
-		if (dev_addr == -1)
-			dev_addr = 0x70;
-		debug("%s(): i2c_port(%d) for re-driver(%#x)\n", __func__, i2c_port, dev_addr);
-
-		writel(0xcafe, 0x18000e00);
-		cell = dev_read_prop(dev, "eq-table", &len);
+	// update configs to dmem for re-driver
+	writel(0x0000dead, 0x18000e00);	// mark re-driver cfg not ready
+	cell = dev_read_prop(dev, "eq-table", &len);
+	if (cell) {
 		for (i = 0; i < len / sizeof(u32); ++i)
 			writel(fdt32_to_cpu(cell[i]), 0x18000e04 + i * 4);
-#ifdef USE_SI2C
-		i2c_port %= 4;
-		i2c_base = 0x1e7a8000;
-#else
-		i2c_base = 0x1e78a000;
-#endif
-		writel(i2c_base + 0x80 + 0x80 * i2c_port, 0x18000e28);
-		writel(i2c_base + 0xc00 + 0x20 * i2c_port, 0x18000e2c);
-		writel(dev_addr, 0x18000e30);
-
-		// i2c global init
-		writel(0x16, i2c_base + 0x0c);
-		writel(0x041230C6, i2c_base + 0x10);
-
-		// i2c port init
-		i2c_base = i2c_base + 0x80 + 0x80 * i2c_port;
-		writel(0x0, i2c_base);
-		mdelay(1);
-		writel(0x28001, i2c_base);
-		writel(0x344001, i2c_base + 0x04);
-		writel(0xFFFFFFFF, i2c_base + 0x14);
-		writel(0x0, i2c_base + 0x10);
-		mdelay(10);
+	} else {
+		debug("%s(): Failed to get eq-table for re-driver\n", __func__);
+		goto ERR_DTS;
 	}
 
+	tmp = dev_read_s32_default(dev, "i2c-base-addr", -1);
+	if (tmp == -1) {
+		debug("%s(): Failed to get i2c port's base address\n", __func__);
+		goto ERR_DTS;
+	}
+	writel(tmp, 0x18000e28);
+
+	tmp = dev_read_s32_default(dev, "i2c-buf-addr", -1);
+	if (tmp == -1) {
+		debug("%s(): Failed to get i2c port's buf address\n", __func__);
+		goto ERR_DTS;
+	}
+	writel(tmp, 0x18000e2c);
+
+	tmp = dev_read_s32_default(dev, "dev-addr", -1);
+	if (tmp == -1)
+		tmp = 0x70;
+	writel(tmp, 0x18000e30);
+	writel(0x0000cafe, 0x18000e00);	// mark re-driver cfg ready
+
+ERR_DTS:
 	/* release DPMCU internal reset */
-	writel(0x10000010, 0x180100e0);
-	writel(0x10001110, 0x180100e0);
+	mcu_ctrl &= ~MCU_CTRL_AHBS_IMEM_EN;
+	writel(mcu_ctrl, MCU_CTRL);
+	mcu_ctrl |= MCU_CTRL_CORE_SW_RST | MCU_CTRL_AHBM_SW_RST;
+	writel(mcu_ctrl, MCU_CTRL);
 	//disable dp interrupt
-	writel(0x00ff0000, 0x180100e8);
+	writel(FIELD_PREP(MCU_INTR_CTRL_EN, 0xff), MCU_INTR_CTRL);
 	//set vga ASTDP with DPMCU FW handling scratch
 	writel(readl(0x1e6e2100) | (0x7 << 9), 0x1e6e2100);	
 
