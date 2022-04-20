@@ -62,14 +62,14 @@
 #define I2C_BUFF_OFFSET		0x20
 
 /* Re-driver setting  */
-#define RD_EQ3		0x80
-#define RD_EQ2		0x40
-#define RD_EQ1		0x20
-#define RD_EQ0		0x10
-#define RD_FG1		0x08
-#define RD_FG0		0x04
-#define RD_SW1		0x02
-#define RD_SW0		0x01
+#define RD_EQ3			0x80
+#define RD_EQ2			0x40
+#define RD_EQ1			0x20
+#define RD_EQ0			0x10
+#define RD_FG1			0x08
+#define RD_FG0			0x04
+#define RD_SW1			0x02
+#define RD_SW0			0x01
 
 /* Aux write command */
 #define AUX_CMD_W		0x80000010
@@ -155,9 +155,9 @@
 #define F_EXE_AUTO		0x00000400	// Enter auto mode
 
 /* Print message define */
-#define PRINT_RATE_1_62	printf("DP Rate 1.62 Gbps !\n")
-#define PRINT_RATE_2_70	printf("DP Rate 2.70 Gbps !\n")
-#define PRINT_RATE_5_40	printf("DP Rate 5.40 Gbps !\n")
+#define PRINT_RATE_1_62		printf("DP Rate 1.62 Gbps !\n")
+#define PRINT_RATE_2_70		printf("DP Rate 2.70 Gbps !\n")
+#define PRINT_RATE_5_40		printf("DP Rate 5.40 Gbps !\n")
 
 #define PRINT_SWING_0		printf("DP Swing Level 0!\n")
 #define PRINT_SWING_1		printf("DP Swing Level 1!\n")
@@ -177,21 +177,21 @@
 #define PRINT_INVALID		printf("This parameter is invalid : \t")
 
 #define PRINT_ITEM_A		printf("3.1 Eye Diagram Test - PRBS7\n");\
-				 printf("3.4 Inter Pair Skew Test -PRBS7\n");\
-				 printf("3.11 Non ISI Jitter Test -PRBS7\n");\
-				 printf("3.12 Total Jitter Test -PRBS7\n")\
+				printf("3.4 Inter Pair Skew Test -PRBS7\n");\
+				printf("3.11 Non ISI Jitter Test -PRBS7\n");\
+				printf("3.12 Total Jitter Test -PRBS7\n")\
 
 #define PRINT_ITEM_B		printf("3.3 Peak to Peak Voltage Test - PRBS7\n")
 
 #define PRINT_ITEM_C		printf("3.1 Eye Diagram Test with No Cable Mode - HBR2CPAT\n");\
-				 printf("3.1 Eye Diagram Test - HBR2CPAT\n");\
-				 printf("3.12 Total Jitter Test with No Cable Model -HBR2CPAT\n");\
-				 printf("3.12 Total Jitter Test -HBR2CPAT\n");\
-				 printf("3.12 Deterministic Jitter Test with No Cable Model -HBR2CPAT\n");\
-				 printf("3.12 Deterministic Jitter Test -HBR2CPAT\n")\
+				printf("3.1 Eye Diagram Test - HBR2CPAT\n");\
+				printf("3.12 Total Jitter Test with No Cable Model -HBR2CPAT\n");\
+				printf("3.12 Total Jitter Test -HBR2CPAT\n");\
+				printf("3.12 Deterministic Jitter Test with No Cable Model -HBR2CPAT\n");\
+				printf("3.12 Deterministic Jitter Test -HBR2CPAT\n")\
 
 #define PRINT_ITEM_D		printf("3.3 Peak to Peak Voltage Test -PLTPAT\n");\
-				 printf("3.3 Pre-Emphasis Level Test and Pre-Emphasis Level Delta Test -PLTPAT\n")\
+				printf("3.3 Pre-Emphasis Level Test and Pre-Emphasis Level Delta Test -PLTPAT\n")\
 
 #define PRINT_ITEM_E		printf("3.3  Non-Transition Voltage Range Measurement -PLTPAT\n")
 
@@ -200,14 +200,14 @@
 #define PRINT_ITEM_G		printf("3.3 Non-Transition Voltage Range Measurement - PRBS7\n")
 
 #define PRINT_ITEM_H		printf("3.12 Total Jitter Test with No Cable Model -D10.2\n");\
-						printf("3.12 Total Jitter Test -D10.2\n");\
-						printf("3.12 Deterministic Jitter Test with No Cable Model -D10.2\n");\
-						printf("3.12 Deterministic Jitter Test -D10.2\n");\
-						printf("3.12 Random Jitter Test with No Cable Model -D10.2\n");\
-						printf("3.12 Random Jitter Test -D10.2\n");\
-						printf("3.14 Main Link Frequency Compliance -D10.2\n");\
-						printf("3.15 SSC Modulation Frequency Test -D10.2\n");\
-						printf("3.16 SSC Modulation Deviation Test -D10.2\n")\
+				printf("3.12 Total Jitter Test -D10.2\n");\
+				printf("3.12 Deterministic Jitter Test with No Cable Model -D10.2\n");\
+				printf("3.12 Deterministic Jitter Test -D10.2\n");\
+				printf("3.12 Random Jitter Test with No Cable Model -D10.2\n");\
+				printf("3.12 Random Jitter Test -D10.2\n");\
+				printf("3.14 Main Link Frequency Compliance -D10.2\n");\
+				printf("3.15 SSC Modulation Frequency Test -D10.2\n");\
+				printf("3.16 SSC Modulation Deviation Test -D10.2\n")\
 
 #define PRINT_ITEM_I		printf("3.2 Non Pre-Emphasis Level Test - PRBS7\n")
 
