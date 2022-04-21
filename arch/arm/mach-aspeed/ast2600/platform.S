@@ -44,6 +44,7 @@
 #define AST_SCU_DEBUG_CTRL2             (AST_SCU_BASE + 0x0D8)
 #define AST_SCU_HPLL_PARAM		(AST_SCU_BASE + 0x200)
 #define AST_SCU_HPLL_PARAM_EXT		(AST_SCU_BASE + 0x204)
+#define AST_SCU_USB_MULTI_FUNC		(AST_SCU_BASE + 0x440)
 #define AST_SCU_HW_STRAP1		(AST_SCU_BASE + 0x500)
 #define AST_SCU_HW_STRAP2		(AST_SCU_BASE + 0x510)
 #define AST_SCU_HW_STRAP3		(AST_SCU_BASE + 0x51C)
@@ -272,6 +273,11 @@ wait_lock:
 
 	mov	r0, #0x1
 	ldr	r1, =AST_SCU_CA7_PARITY_CHK
+	str	r0, [r1]
+
+	/* Select USB2.0 Device mode as USB port B */
+	ldr	r0, =0x10000000
+	ldr	r1, =AST_SCU_USB_MULTI_FUNC
 	str	r0, [r1]
 
 #if 0
