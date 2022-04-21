@@ -1763,6 +1763,8 @@ void phy_realtek5 (MAC_ENGINE *eng) {//RTL8211F
 #endif
 	}
 
+	/* additional delay for PHY PCS loopback mode */
+	phy_delay(500);
 	RTK_DBG_PRINTF("\nSet RTL8211F [End] =====>\n");
 }
 
