@@ -891,6 +891,7 @@ static int aspeed_spi_xfer(struct udevice *dev, unsigned int bitlen,
 	u8 *cmd_buf = priv->cmd_buf;
 	size_t data_bytes;
 	int err = 0;
+	u32 iomode;
 
 	flash = aspeed_spi_get_flash(dev);
 	if (!flash)
@@ -928,6 +929,15 @@ static int aspeed_spi_xfer(struct udevice *dev, unsigned int bitlen,
 							   priv->cmd_len,
 							   cmd_buf, data_bytes,
 							   din);
+			} else if (cmd_buf[0] == SPINOR_OP_RDAR) {
+				/* only for Cypress flash */
+				iomode = flash->read_iomode;
+				flash->read_iomode = 0;
+				err = aspeed_spi_read_user(priv, flash,
+							   priv->cmd_len,
+							   cmd_buf, data_bytes,
+							   din);
+				flash->read_iomode = iomode;
 			} else {
 				err = aspeed_spi_read(priv, flash,
 						      priv->cmd_len,
