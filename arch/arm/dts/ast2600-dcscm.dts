@@ -159,6 +159,27 @@
 	pinctrl-0 = <&pinctrl_i2c9_default>;
 };
 
+&pcie_phy1 {
+	status = "disabled";
+};
+
+&pcie_bridge {
+	status = "disabled";
+};
+
 &ehci1 {
 	status = "disabled";
 };
+
+&mac1 {
+	status = "disabled";
+};
+
+&mac2 {
+	status = "disabled";
+};
+
+&mac3 {
+	status = "disabled";
+};
+
