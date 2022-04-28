@@ -13,6 +13,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_fmcquad_default>;
 	timing-calibration-disabled;
+	num-cs = <1>;
 
 	flash@0 {
 		compatible = "spi-flash", "sst,w25q256";
@@ -23,19 +24,11 @@
 	};
 
 	flash@1 {
-		compatible = "spi-flash", "sst,w25q256";
-		status = "okay";
-		spi-max-frequency = <25000000>;
-		spi-tx-bus-width = <1>;
-		spi-rx-bus-width = <1>;
+		status = "disabled";
 	};
 
 	flash@2 {
-		compatible = "spi-flash", "sst,w25q256";
 		status = "disabled";
-		spi-max-frequency = <25000000>;
-		spi-tx-bus-width = <1>;
-		spi-rx-bus-width = <1>;
 	};
 };
 
@@ -66,36 +59,7 @@
 };
 
 &spi2 {
-	status = "okay";
-
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_spi2_default &pinctrl_spi2cs1_default
-			&pinctrl_spi2cs2_default &pinctrl_spi2quad_default>;
-	timing-calibration-disabled;
-
-	flash@0 {
-		compatible = "spi-flash", "sst,w25q256";
-		status = "okay";
-		spi-max-frequency = <25000000>;
-		spi-tx-bus-width = <1>;
-		spi-rx-bus-width = <1>;
-	};
-
-	flash@1 {
-		compatible = "spi-flash", "sst,w25q256";
-		status = "disabled";
-		spi-max-frequency = <25000000>;
-		spi-tx-bus-width = <1>;
-		spi-rx-bus-width = <1>;
-	};
-
-	flash@2 {
-		compatible = "spi-flash", "sst,w25q256";
-		status = "disabled";
-		spi-max-frequency = <25000000>;
-		spi-tx-bus-width = <1>;
-		spi-rx-bus-width = <1>;
-	};
+	status = "disabled";
 };
 
 &emmc {
