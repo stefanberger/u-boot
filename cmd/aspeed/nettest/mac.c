@@ -1026,7 +1026,7 @@ void FPri_End (MAC_ENGINE *eng, uint8_t option)
 			       eng->io.mac34_drv_reg.value.w & 0xf);
 		}
 #else
-		if (eng->io.mac12_drv_reg.value.w) {
+		if (eng->io.mac12_drv_reg.value.w & GENMASK(11, 8)) {
 			PRINTF(option,
 			       "\n[Warning] [%08X] 0x%08x is not the recommended value "
 			       "0.\n",
