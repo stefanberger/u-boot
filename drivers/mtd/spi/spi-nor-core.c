@@ -2319,6 +2319,10 @@ static int spi_nor_init_params(struct spi_nor *nor,
 		spi_nor_set_read_settings(&params->reads[SNOR_CMD_READ_FAST],
 					  0, 8, SPINOR_OP_READ_FAST,
 					  SNOR_PROTO_1_1_1);
+#ifdef CONFIG_SPI_FLASH_SPANSION
+		if (cypress_s25hx_t(info))
+			params->reads[SNOR_CMD_READ_FAST].num_mode_clocks = 8;
+#endif
 	}
 
 	if (info->flags & SPI_NOR_DUAL_READ) {
@@ -2404,7 +2408,7 @@ static int spi_nor_init_params(struct spi_nor *nor,
 				/* Default page size is 256-byte, but BFPT reports 512-byte */
 				params->page_size = 256;
 				/* READ_FAST_4B (0Ch) requires mode cycles*/
-				params->reads[SNOR_CMD_READ_FAST].num_mode_clocks = 0;
+				params->reads[SNOR_CMD_READ_FAST].num_mode_clocks = 8;
 				/* PP_1_1_4 is not supported */
 				params->hwcaps.mask &= ~SNOR_HWCAPS_PP_1_1_4;
 				/* Use volatile register to enable quad */
