@@ -172,7 +172,7 @@ do_ast_dptest(cmd_tbl_t *cmdtp, int flags, int argc, char *const argv[])
 					Deemphasis_Level_1	= DP_DEEMP_2;
 					Deemphasis_Show	= DP_DEEMP_0;
 					Deemphasis_RD		= Deemphasis_Show;
-					PRINT_DEEMP_0
+					PRINT_DEEMP_0;
 					break;
 				/* Press "5" : Set Deemphasis_Level as 0 / Deemphasis_Level_1 as 0 */
 				case '5':
@@ -180,7 +180,7 @@ do_ast_dptest(cmd_tbl_t *cmdtp, int flags, int argc, char *const argv[])
 					Deemphasis_Level_1	= DP_DEEMP_0;
 					Deemphasis_Show	= DP_DEEMP_1;
 					Deemphasis_RD		= Deemphasis_Show;
-					PRINT_DEEMP_1
+					PRINT_DEEMP_1;
 					break;
 				/* Press "6" : Set Deemphasis_Level as 2 / Deemphasis_Level_1 as 1 */
 				case '6':
@@ -188,22 +188,22 @@ do_ast_dptest(cmd_tbl_t *cmdtp, int flags, int argc, char *const argv[])
 					Deemphasis_Level_1	= DP_DEEMP_1;
 					Deemphasis_Show	= DP_DEEMP_2;
 					Deemphasis_RD		= Deemphasis_Show;
-					PRINT_DEEMP_2
+					PRINT_DEEMP_2;
 					break;
 				/* Press "7" : Set Swing as 0 */
 				case '7':
 					Swing_Level			=  0;
-					PRINT_SWING_0
+					PRINT_SWING_0;
 					break;
 				/* Press "8" : Set Swing as 1 */
 				case '8':
 					Swing_Level			=  1;
-					PRINT_SWING_1
+					PRINT_SWING_1;
 					break;
 				/* Press "9" : Set Swing as 2 */
 				case '9':
 					Swing_Level			=  2;
-					PRINT_SWING_2
+					PRINT_SWING_2;
 					break;
 #endif
 				default:
