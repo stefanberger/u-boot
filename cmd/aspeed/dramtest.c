@@ -194,6 +194,9 @@ static int do_ast_dramtest(cmd_tbl_t *cmdtp, int flag, int argc,
 			PassCnt++;
 			printf("Pass %d/%ld\n", PassCnt, Testcounter);
 		}
+
+		if (ctrlc())
+			break;
 	}
 
 	return ret;
