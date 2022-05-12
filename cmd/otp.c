@@ -15,12 +15,13 @@
 #include <mapmem.h>
 #include <asm/io.h>
 #include <linux/compiler.h>
+#include <linux/iopoll.h>
 #include <u-boot/sha256.h>
 #include "otp_info.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 
-#define OTP_VER				"1.2.0"
+#define OTP_VER				"1.2.1"
 
 #define OTP_PASSWD			0x349fe38a
 #define RETRY				20
@@ -309,13 +310,17 @@ static u32 chip_version(void)
 	return OTP_FAILURE;
 }
 
-static void wait_complete(void)
+static int wait_complete(void)
 {
-	int reg;
+	u32 val;
+	int ret;
 
-	do {
-		reg = readl(OTP_STATUS);
-	} while ((reg & 0x6) != 0x6);
+	udelay(1);
+	ret = readl_poll_timeout(OTP_STATUS, val, (val & 0x6) == 0x6, 100000);
+	if (ret)
+		printf("%s: timeout, SEC14 = 0x%x\n", __func__, val);
+
+	return ret;
 }
 
 static void otp_write(u32 otp_addr, u32 data)
@@ -499,16 +504,17 @@ static u32 verify_dw(u32 otp_addr, u32 *value, u32 *ignore, u32 *compare, int si
 	}
 }
 
-static void otp_prog(u32 otp_addr, u32 prog_bit)
+static int otp_prog(u32 otp_addr, u32 prog_bit)
 {
 	otp_write(0x0, prog_bit);
 	writel(otp_addr, OTP_ADDR); //write address
 	writel(prog_bit, OTP_COMPARE_1); //write data
 	writel(0x23b1e364, OTP_COMMAND); //write command
-	wait_complete();
+
+	return wait_complete();
 }
 
-static void _otp_prog_bit(u32 value, u32 prog_address, u32 bit_offset)
+static int _otp_prog_bit(u32 value, u32 prog_address, u32 bit_offset)
 {
 	int prog_bit;
 
@@ -516,31 +522,36 @@ static void _otp_prog_bit(u32 value, u32 prog_address, u32 bit_offset)
 		if (value)
 			prog_bit = ~(0x1 << bit_offset);
 		else
-			return;
+			return 0;
 	} else {
 		if (info_cb.version != OTP_A3)
 			prog_address |= 1 << 15;
 		if (!value)
 			prog_bit = 0x1 << bit_offset;
 		else
-			return;
+			return 0;
 	}
-	otp_prog(prog_address, prog_bit);
+	return otp_prog(prog_address, prog_bit);
 }
 
 static int otp_prog_dc_b(u32 value, u32 prog_address, u32 bit_offset)
 {
 	int pass;
 	int i;
+	int ret;
 
 	otp_soak(1);
-	_otp_prog_bit(value, prog_address, bit_offset);
+	ret = _otp_prog_bit(value, prog_address, bit_offset);
+	if (ret)
+		return OTP_FAILURE;
 	pass = 0;
 
 	for (i = 0; i < RETRY; i++) {
 		if (verify_bit(prog_address, bit_offset, value) != 0) {
 			otp_soak(2);
-			_otp_prog_bit(value, prog_address, bit_offset);
+			ret = _otp_prog_bit(value, prog_address, bit_offset);
+			if (ret)
+				return OTP_FAILURE;
 			if (verify_bit(prog_address, bit_offset, value) != 0) {
 				otp_soak(1);
 			} else {
@@ -558,9 +569,10 @@ static int otp_prog_dc_b(u32 value, u32 prog_address, u32 bit_offset)
 	return OTP_FAILURE;
 }
 
-static void otp_prog_dw(u32 value, u32 ignore, u32 prog_address)
+static int otp_prog_dw(u32 value, u32 ignore, u32 prog_address)
 {
 	int j, bit_value, prog_bit;
+	int ret;
 
 	for (j = 0; j < 32; j++) {
 		if ((ignore >> j) & 0x1)
@@ -579,8 +591,11 @@ static void otp_prog_dw(u32 value, u32 ignore, u32 prog_address)
 			else
 				prog_bit = 0x1 << j;
 		}
-		otp_prog(prog_address, prog_bit);
+		ret = otp_prog(prog_address, prog_bit);
+		if (ret)
+			return ret;
 	}
+	return 0;
 }
 
 static int otp_prog_verify_2dw(u32 *data, u32 *buf, u32 *ignore_mask, u32 prog_address)
@@ -592,6 +607,7 @@ static int otp_prog_verify_2dw(u32 *data, u32 *buf, u32 *ignore_mask, u32 prog_a
 	u32 buf0_masked;
 	u32 buf1_masked;
 	u32 compare[2];
+	int ret;
 
 	data0_masked = data[0]  & ~ignore_mask[0];
 	buf0_masked  = buf[0] & ~ignore_mask[0];
@@ -608,19 +624,32 @@ static int otp_prog_verify_2dw(u32 *data, u32 *buf, u32 *ignore_mask, u32 prog_a
 	}
 
 	otp_soak(1);
-	if (data0_masked != buf0_masked)
-		otp_prog_dw(buf[0], ignore_mask[0], prog_address);
-	if (data1_masked != buf1_masked)
-		otp_prog_dw(buf[1], ignore_mask[1], prog_address + 1);
+	if (data0_masked != buf0_masked) {
+		ret = otp_prog_dw(buf[0], ignore_mask[0], prog_address);
+		if (ret)
+			return OTP_FAILURE;
+	}
+
+	if (data1_masked != buf1_masked) {
+		ret = otp_prog_dw(buf[1], ignore_mask[1], prog_address + 1);
+		if (ret)
+			return OTP_FAILURE;
+	}
 
 	pass = 0;
 	for (i = 0; i < RETRY; i++) {
 		if (verify_dw(prog_address, buf, ignore_mask, compare, 2) != 0) {
 			otp_soak(2);
-			if (compare[0] != 0)
-				otp_prog_dw(compare[0], ignore_mask[0], prog_address);
-			if (compare[1] != ~0)
-				otp_prog_dw(compare[1], ignore_mask[1], prog_address + 1);
+			if (compare[0] != 0) {
+				ret = otp_prog_dw(compare[0], ignore_mask[0], prog_address);
+				if (ret)
+					return OTP_FAILURE;
+			}
+			if (compare[1] != ~0) {
+				ret = otp_prog_dw(compare[1], ignore_mask[1], prog_address + 1);
+				if (ret)
+					return OTP_FAILURE;
+			}
 			if (verify_dw(prog_address, buf, ignore_mask, compare, 2) != 0) {
 				otp_soak(1);
 			} else {
@@ -1567,6 +1596,7 @@ static int otp_prog_conf(struct otp_image_layout *image_layout, u32 *otp_conf)
 	u32 *conf_ignore = (u32 *)image_layout->conf_ignore;
 	u32 data_masked;
 	u32 buf_masked;
+	int ret;
 
 	printf("Start Programing...\n");
 	otp_soak(0);
@@ -1582,13 +1612,17 @@ static int otp_prog_conf(struct otp_image_layout *image_layout, u32 *otp_conf)
 		}
 
 		otp_soak(1);
-		otp_prog_dw(conf[i], conf_ignore[i], prog_address);
+		ret = otp_prog_dw(conf[i], conf_ignore[i], prog_address);
+		if (ret)
+			return OTP_FAILURE;
 
 		pass = 0;
 		for (k = 0; k < RETRY; k++) {
 			if (verify_dw(prog_address, &conf[i], &conf_ignore[i], compare, 1) != 0) {
 				otp_soak(2);
-				otp_prog_dw(compare[0], conf_ignore[i], prog_address);
+				ret = otp_prog_dw(compare[0], conf_ignore[i], prog_address);
+				if (ret)
+					return OTP_FAILURE;
 				if (verify_dw(prog_address, &conf[i], &conf_ignore[i], compare, 1) != 0) {
 					otp_soak(1);
 				} else {
@@ -1624,6 +1658,7 @@ static int otp_prog_scu_protect(struct otp_image_layout *image_layout, u32 *scu_
 	u32 *OTPSCU_IGNORE = (u32 *)image_layout->scu_pro_ignore;
 	u32 data_masked;
 	u32 buf_masked;
+	int ret;
 
 	printf("Start Programing...\n");
 	otp_soak(0);
@@ -1637,13 +1672,16 @@ static int otp_prog_scu_protect(struct otp_image_layout *image_layout, u32 *scu_
 		}
 
 		otp_soak(1);
-		otp_prog_dw(OTPSCU[i], OTPSCU_IGNORE[i], prog_address);
-
+		ret = otp_prog_dw(OTPSCU[i], OTPSCU_IGNORE[i], prog_address);
+		if (ret)
+			return OTP_FAILURE;
 		pass = 0;
 		for (k = 0; k < RETRY; k++) {
 			if (verify_dw(prog_address, &OTPSCU[i], &OTPSCU_IGNORE[i], compare, 1) != 0) {
 				otp_soak(2);
-				otp_prog_dw(compare[0], OTPSCU_IGNORE[i], prog_address);
+				ret = otp_prog_dw(compare[0], OTPSCU_IGNORE[i], prog_address);
+				if (ret)
+					return OTP_FAILURE;
 				if (verify_dw(prog_address, &OTPSCU[i], &OTPSCU_IGNORE[i], compare, 1) != 0) {
 					otp_soak(1);
 				} else {
