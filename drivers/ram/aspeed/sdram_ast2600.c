@@ -82,10 +82,24 @@
 #error "undefined DDR4 target rate\n"
 #endif
 
+/**
+ * MR01[26:24] - ODT configuration (DRAM side)
+ *   b'001 : 60 ohm
+ *   b'101 : 48 ohm
+ *   b'011 : 40 ohm (default)
+ */
+#if defined(CONFIG_ASPEED_DDR4_DRAM_ODT60)
+#define MR01_DRAM_ODT			(0x1 << 24)
+#elif defined(CONFIG_ASPEED_DDR4_DRAM_ODT48)
+#define MR01_DRAM_ODT			(0x5 << 24)
+#else
+#define MR01_DRAM_ODT			(0x3 << 24)
+#endif
+
 /* AC timing and SDRAM mode registers */
 #if defined(CONFIG_FPGA_ASPEED) || defined(CONFIG_ASPEED_PALLADIUM)
 /* mode register settings for FPGA are fixed */
-#define DDR4_MR01_MODE		0x03010100
+#define DDR4_MR01_MODE		(MR01_DRAM_ODT | 0x00010100)
 #define DDR4_MR23_MODE		0x00000000
 #define DDR4_MR45_MODE		0x04C00000
 #define DDR4_MR6_MODE		0x00000050
@@ -100,7 +114,7 @@
 #define SEARCH_RDWIN_PTRN_SUM   0xbcf02355
 #else
 /* mode register setting for real chip are derived from the model GDDR4-1600 */
-#define DDR4_MR01_MODE		0x03010510
+#define DDR4_MR01_MODE		(MR01_DRAM_ODT | 0x00010510)
 #define DDR4_MR23_MODE		0x00000000
 #define DDR4_MR45_MODE		0x04000000
 #define DDR4_MR6_MODE           0x00000400

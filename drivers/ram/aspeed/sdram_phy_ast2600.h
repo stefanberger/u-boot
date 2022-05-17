@@ -1,6 +1,35 @@
 #define DDR_PHY_TBL_CHG_ADDR            0xaeeddeea
 #define DDR_PHY_TBL_END                 0xaeededed
 
+/**
+ * phyr030[10:8] - ODT configuration (PHY side)
+ *   b'000 : ODT disabled
+ *   b'100 : 60 ohm
+ *   b'101 : 48 ohm
+ *   b'110 : 40 ohm (default)
+ */
+#if defined(CONFIG_ASPEED_DDR4_PHY_ODT60)
+#define PHY_ODT			(0x4 << 8)
+#elif defined(CONFIG_ASPEED_DDR4_PHY_ODT48)
+#define PHY_ODT			(0x5 << 8)
+#else
+#define PHY_ODT			(0x6 << 8)
+#endif
+
+/**
+ * phyr058[10:8] - ODT configuration (DRAM side)
+ *   b'001 : 60 ohm
+ *   b'101 : 48 ohm
+ *   b'011 : 40 ohm (default)
+ */
+#if defined(CONFIG_ASPEED_DDR4_DRAM_ODT60)
+#define DRAM_ODT			(0x1 << 8)
+#elif defined(CONFIG_ASPEED_DDR4_DRAM_ODT48)
+#define DRAM_ODT			(0x5 << 8)
+#else
+#define DRAM_ODT			(0x3 << 8)
+#endif
+
 #if defined(CONFIG_ASPEED_DDR4_800)
 u32 ast2600_sdramphy_config[165] = {
 	0x1e6e0100,	// start address
@@ -16,7 +45,7 @@ u32 ast2600_sdramphy_config[165] = {
 	0x20000000,	// phyr024
 	0x00000008,	// phyr028
 	0x00000000,	// phyr02c
-	0x00077600,	// phyr030
+	(0x00077000 | PHY_ODT),	// phyr030
 	0x00000000,	// phyr034
 	0x00000000,	// phyr038
 	0x20000000,	// phyr03c
@@ -26,7 +55,7 @@ u32 ast2600_sdramphy_config[165] = {
 	0x00003080,	// phyr04c
 	0x04000000,	// phyr050
 	0x00000200,	// phyr054
-	0x03140201,	// phyr058
+	(0x03140001 | DRAM_ODT),	// phyr058
 	0x04800000,	// phyr05c
 	0x0800044e,	// phyr060
 	0x00000000,	// phyr064
@@ -184,7 +213,7 @@ u32 ast2600_sdramphy_config[165] = {
 	0x20000000,	// phyr024
 	0x00000008,	// phyr028
 	0x00000000,	// phyr02c
-	0x00077600,	// phyr030
+	(0x00077000 | PHY_ODT),	// phyr030
 	0x00000000,	// phyr034
 	0x00000000,	// phyr038
 	0x20000000,	// phyr03c
@@ -194,7 +223,7 @@ u32 ast2600_sdramphy_config[165] = {
 	0x00003080,	// phyr04c
 	0x04000000,	// phyr050
 	0x00000200,	// phyr054
-	0x03140501,	// phyr058-rtt:40
+	(0x03140001 | DRAM_ODT),	// phyr058
 	0x04800000,	// phyr05c
 	0x0800044e,	// phyr060
 	0x00000000,	// phyr064

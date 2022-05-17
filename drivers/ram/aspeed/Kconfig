@@ -63,4 +63,50 @@ config ASPEED_ECC_SIZE
 	  the ECC engine.  If the size is set to 0, the sdram driver will 
 	  calculate the SDRAM size and set the whole range be ECC enabled.
 endif
+
+choice
+	prompt "DDR4 PHY side ODT"
+	default ASPEED_DDR4_PHY_ODT40
+
+config ASPEED_DDR4_PHY_ODT60
+	bool "DDR4 PHY side ODT 60 ohm"
+	depends on DM && OF_CONTROL && ARCH_ASPEED
+	help
+	  select DDR4 PHY side ODT 60 ohm
+
+config ASPEED_DDR4_PHY_ODT48
+	bool "DDR4 PHY side ODT 48 ohm"
+	depends on DM && OF_CONTROL && ARCH_ASPEED
+	help
+	  select DDR4 PHY side ODT 48 ohm
+
+config ASPEED_DDR4_PHY_ODT40
+	bool "DDR4 PHY side ODT 40 ohm"
+	depends on DM && OF_CONTROL && ARCH_ASPEED
+	help
+	  select DDR4 PHY side ODT 40 ohm
+endchoice
+
+choice
+	prompt "DDR4 DRAM side ODT"
+	default ASPEED_DDR4_DRAM_ODT40
+
+config ASPEED_DDR4_DRAM_ODT60
+	bool "DDR4 DRAM side ODT 60 ohm"
+	depends on DM && OF_CONTROL && ARCH_ASPEED
+	help
+	  select DDR4 DRAM side ODT 60 ohm
+
+config ASPEED_DDR4_DRAM_ODT48
+	bool "DDR4 DRAM side ODT 48 ohm"
+	depends on DM && OF_CONTROL && ARCH_ASPEED
+	help
+	  select DDR4 DRAM side ODT 48 ohm
+
+config ASPEED_DDR4_DRAM_ODT40
+	bool "DDR4 DRAM side ODT 40 ohm"
+	depends on DM && OF_CONTROL && ARCH_ASPEED
+	help
+	  select DDR4 DRAM side ODT 40 ohm
+endchoice
 endif
