@@ -87,7 +87,6 @@
 	pinctrl-0 = <&pinctrl_fmcquad_default>;
 
 	flash@0 {
-		compatible = "spi-flash", "sst,w25q256";
 		status = "okay";
 		spi-max-frequency = <50000000>;
 		spi-tx-bus-width = <2>;
@@ -95,7 +94,6 @@
 	};
 
 	flash@1 {
-		compatible = "spi-flash", "sst,w25q256";
 		status = "okay";
 		spi-max-frequency = <50000000>;
 		spi-tx-bus-width = <2>;
@@ -103,7 +101,6 @@
 	};
 
 	flash@2 {
-		compatible = "spi-flash", "sst,w25q256";
 		status = "okay";
 		spi-max-frequency = <50000000>;
 		spi-tx-bus-width = <2>;
@@ -120,7 +117,6 @@
 			&pinctrl_spi1wp_default &pinctrl_spi1quad_default>;
 
 	flash@0 {
-		compatible = "spi-flash", "sst,w25q256";
 		status = "okay";
 		spi-max-frequency = <50000000>;
 		spi-tx-bus-width = <4>;
@@ -128,7 +124,6 @@
 	};
 
 	flash@1 {
-		compatible = "spi-flash", "sst,w25q256";
 		status = "okay";
 		spi-max-frequency = <50000000>;
 		spi-tx-bus-width = <4>;
@@ -144,7 +139,6 @@
 			&pinctrl_spi2cs2_default &pinctrl_spi2quad_default>;
 
 	flash@0 {
-		compatible = "spi-flash", "sst,w25q256";
 		status = "okay";
 		spi-max-frequency = <50000000>;
 		spi-tx-bus-width = <4>;
@@ -152,7 +146,6 @@
 	};
 
 	flash@1 {
-		compatible = "spi-flash", "sst,w25q256";
 		status = "okay";
 		spi-max-frequency = <50000000>;
 		spi-tx-bus-width = <4>;
@@ -160,7 +153,6 @@
 	};
 
 	flash@2 {
-		compatible = "spi-flash", "sst,w25q256";
 		status = "okay";
 		spi-max-frequency = <50000000>;
 		spi-tx-bus-width = <4>;
