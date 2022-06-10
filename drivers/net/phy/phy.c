@@ -988,3 +988,10 @@ int phy_get_interface_by_name(const char *str)
 
 	return -1;
 }
+
+bool phy_interface_is_ncsi(void)
+{
+	struct eth_pdata *pdata = dev_get_platdata(eth_get_dev());
+
+	return pdata->phy_interface == PHY_INTERFACE_MODE_NCSI;
+}
