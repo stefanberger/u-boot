@@ -932,7 +932,8 @@ struct phy_device *phy_connect(struct mii_dev *bus, int addr,
 #endif
 
 #ifdef CONFIG_PHY_NCSI
-	phydev = phy_device_create(bus, 0, PHY_NCSI_ID, false, interface);
+	if (interface == PHY_INTERFACE_MODE_NCSI)
+		phydev = phy_device_create(bus, 0, PHY_NCSI_ID, false, interface);
 #endif
 
 	if (!phydev)
