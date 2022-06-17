@@ -45,11 +45,7 @@ extern int aspeed_pcie_phy_link_status(struct udevice *dev)
 
 	printf("RC Bridge %s : ", dev->name);
 	if (pcie_link & PCIE_LINK_STS) {
-		printf("Link up - ");
-		if (pcie_link & PCIE_LINK_5G)
-			printf("5G\n");
-		if (pcie_link & PCIE_LINK_2_5G)
-			printf("2.5G\n");
+		printf("Link up\n");
 		ret = 1;
 	} else {
 		printf("Link down\n");
@@ -76,7 +72,6 @@ static int aspeed_pcie_phy_probe(struct udevice *dev)
 
 	//reset rc bridge
 	reset_assert(&reset_ctl);
-	reset_deassert(&reset_ctl);
 
 	rc_bridge->reg = devfdt_get_addr_ptr(dev);
 	if (IS_ERR(rc_bridge->reg))
@@ -84,6 +79,8 @@ static int aspeed_pcie_phy_probe(struct udevice *dev)
 
 	writel(PCIE_UNLOCK, rc_bridge->reg + ASPEED_PCIE_LOCK);
 	writel(ROOT_COMPLEX_ID(0x3), rc_bridge->reg + ASPEED_PCIE_GLOBAL);
+
+	reset_deassert(&reset_ctl);
 	mdelay(100);
 
 	return 0;
