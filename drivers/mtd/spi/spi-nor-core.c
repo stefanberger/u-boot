@@ -2410,6 +2410,7 @@ static int spi_nor_init_params(struct spi_nor *nor,
 				/* Default page size is 256-byte, but BFPT reports 512-byte */
 				params->page_size = 256;
 				/* READ_FAST_4B (0Ch) requires mode cycles*/
+				params->reads[SNOR_CMD_READ_FAST].opcode = SPINOR_OP_READ_FAST_4B;
 				params->reads[SNOR_CMD_READ_FAST].num_mode_clocks = 8;
 				/* PP_1_1_4 is not supported */
 				params->hwcaps.mask &= ~SNOR_HWCAPS_PP_1_1_4;
