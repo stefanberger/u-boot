@@ -399,6 +399,12 @@ static int pcie_aspeed_probe(struct udevice *dev)
 	mdelay(100);
 	reset_deassert(&reset_ctl);
 
+	//workaround : Send vender define message for avoid when PCIE RESET send unknown message out
+	writel(0x34000000, &h2x_reg->h2x_tx_desc3);
+	writel(0x0000007f, &h2x_reg->h2x_tx_desc2);
+	writel(0x00001a03, &h2x_reg->h2x_tx_desc1);
+	writel(0x00000000, &h2x_reg->h2x_tx_desc0);
+
 	ret = uclass_get_device_by_driver
 			(UCLASS_MISC, DM_GET_DRIVER(aspeed_ahbc), &ahbc_dev);
 	if (ret) {
@@ -407,13 +413,13 @@ static int pcie_aspeed_probe(struct udevice *dev)
 	}
 	aspeed_ahbc_remap_enable(devfdt_get_addr_ptr(ahbc_dev));
 
-	//init
-	writel(0x1, &h2x_reg->h2x_reg00);
-
 	//ahb to pcie rc
 	writel(0xe0006000, &h2x_reg->h2x_reg60);
 	writel(0x0, &h2x_reg->h2x_reg64);
 	writel(0xFFFFFFFF, &h2x_reg->h2x_reg68);
+
+	//PCIe Host Enable
+	writel(BIT(0), &h2x_reg->h2x_reg00);
 
 	slot0_of_handle =
 		fdtdec_lookup_phandle(fdt, dev_of_offset(dev), "slot0-handle");
