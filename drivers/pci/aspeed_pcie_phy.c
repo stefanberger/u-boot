@@ -80,9 +80,6 @@ static int aspeed_pcie_phy_probe(struct udevice *dev)
 	writel(PCIE_UNLOCK, rc_bridge->reg + ASPEED_PCIE_LOCK);
 	writel(ROOT_COMPLEX_ID(0x3), rc_bridge->reg + ASPEED_PCIE_GLOBAL);
 
-	reset_deassert(&reset_ctl);
-	mdelay(100);
-
 	return 0;
 }
 

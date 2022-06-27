@@ -381,7 +381,7 @@ void aspeed_pcie_rc_slot_enable(struct pcie_aspeed *pcie, int slot)
 static int pcie_aspeed_probe(struct udevice *dev)
 {
 	void *fdt = (void *)gd->fdt_blob;
-	struct reset_ctl reset_ctl;
+	struct reset_ctl reset_ctl, rc0_reset_ctl, rc1_reset_ctl;
 	struct pcie_aspeed *pcie = (struct pcie_aspeed *)dev_get_priv(dev);
 	struct aspeed_h2x_reg *h2x_reg = pcie->h2x_reg;
 	struct udevice *ahbc_dev, *slot0_dev, *slot1_dev;
@@ -391,12 +391,12 @@ static int pcie_aspeed_probe(struct udevice *dev)
 	txTag = 0;
 	ret = reset_get_by_index(dev, 0, &reset_ctl);
 	if (ret) {
-		printf("%s(): Failed to get reset signal\n", __func__);
+		printf("%s(): Failed to get pcie reset signal\n", __func__);
 		return ret;
 	}
 
 	reset_assert(&reset_ctl);
-	mdelay(100);
+	mdelay(1);
 	reset_deassert(&reset_ctl);
 
 	//workaround : Send vender define message for avoid when PCIE RESET send unknown message out
@@ -424,6 +424,11 @@ static int pcie_aspeed_probe(struct udevice *dev)
 	slot0_of_handle =
 		fdtdec_lookup_phandle(fdt, dev_of_offset(dev), "slot0-handle");
 	if (slot0_of_handle) {
+		ret = reset_get_by_index(dev, 1, &rc0_reset_ctl);
+		if (ret) {
+			printf("%s(): Failed to get rc low reset signal\n", __func__);
+			return ret;
+		}
 		aspeed_pcie_rc_slot_enable(pcie, 0);
 		if (uclass_get_device_by_of_offset
 				(UCLASS_MISC, slot0_of_handle, &slot0_dev))
@@ -436,6 +441,11 @@ slot1:
 	slot1_of_handle =
 		fdtdec_lookup_phandle(fdt, dev_of_offset(dev), "slot1-handle");
 	if (slot1_of_handle) {
+		ret = reset_get_by_index(dev, 2, &rc1_reset_ctl);
+		if (ret) {
+			printf("%s(): Failed to get rc high reset signal\n", __func__);
+			return ret;
+		}
 		aspeed_pcie_rc_slot_enable(pcie, 1);
 		if (uclass_get_device_by_of_offset
 				(UCLASS_MISC, slot1_of_handle, &slot1_dev))
@@ -443,7 +453,7 @@ slot1:
 		if (aspeed_pcie_phy_link_status(slot1_dev))
 			aspeed_pcie_set_slot_power_limit(pcie, 1);
 	}
-
+	mdelay(100);
 end:
 	return 0;
 }

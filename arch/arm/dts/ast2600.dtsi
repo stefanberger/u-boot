@@ -429,7 +429,7 @@
 						0x82000000 0x0 0x60000000 0x60000000 0x0 0x20000000>; /* non-prefetchable memory */
 				device_type = "pci";
 				bus-range = <0x00 0xff>;
-				resets = <&rst ASPEED_RESET_H2X>;
+				resets = <&rst ASPEED_RESET_H2X>, <&rst ASPEED_RESET_PCIE_DEV_O>, <&rst ASPEED_RESET_PCIE_RC_O>;
 				slot0-handle = <&pcie_phy0>;
 				slot1-handle = <&pcie_phy1>;
 				status = "disabled";
@@ -773,7 +773,7 @@
 				compatible = "aspeed,ast2600-displayport";
 				reg = <0x1e6eb000 0x200>;
 				interrupts = <GIC_SPI 30 IRQ_TYPE_LEVEL_HIGH>;
-				resets = <&rst ASPEED_RESET_DP> ,<&rst ASPEED_RESET_DP_MCU>;
+				resets = <&rst ASPEED_RESET_DP>, <&rst ASPEED_RESET_DP_MCU>;
 				status = "disabled";
 			};
 
