@@ -621,6 +621,8 @@ config CMD_OTP
 	select SHA512
 	select SHA384
 	select SHA256
+	select RSA
+	select ASPEED_ACRY
         default y
 
 config CMD_RNG
