@@ -16,12 +16,12 @@
 
 /* Version info*/
 #define MAINVER		0
-#define SUBVER			2
-#define TEMPVER			9
+#define SUBVER			3
+#define TEMPVER			2
 
 #define YEAR	2022
-#define MONTH	04
-#define DAY		8
+#define MONTH	07
+#define DAY		11
 
 /* Compile define */
 /* #define RE_DRIVER */
@@ -95,7 +95,7 @@ do_ast_dptest(cmd_tbl_t *cmdtp, int flags, int argc, char *const argv[])
 	Deemphasis_Level	= DP_DEEMP_0;
 	Deemphasis_Level_1	= DP_DEEMP_2;
 	Swing_Level		= 2;
-	SSCG			= DP_SSCG_OFF;
+	SSCG			= DP_SSCG_ON;
 
 	/* Obtain the argc / argv */
 	for (i = 1; i < argc; i++) {
@@ -148,7 +148,7 @@ do_ast_dptest(cmd_tbl_t *cmdtp, int flags, int argc, char *const argv[])
 			/* printf("Press %d\n",received); */
 
 			/* Set parameters path */
-			if (received >= 49 && received <= 57) {
+			if (received >= 49 && received <= 53) {
 				switch (received) {
 				/* Press "1" : Set DP_Rate as 1.62 */
 				case '1':
@@ -166,44 +166,29 @@ do_ast_dptest(cmd_tbl_t *cmdtp, int flags, int argc, char *const argv[])
 				/*	PRINT_RATE_5_40 */
 				/*	break; */
 #ifdef INTERNAL
-				/* Press "4" : Set Deemphasis_Level as 1 / Deemphasis_Level_1 as 2 */
-				case '4':
+				/* Press "3" : Set Deemphasis_Level as 1 / Deemphasis_Level_1 as 2 */
+				case '3':
 					Deemphasis_Level	= DP_DEEMP_1;
 					Deemphasis_Level_1	= DP_DEEMP_2;
 					Deemphasis_Show	= DP_DEEMP_0;
 					Deemphasis_RD		= Deemphasis_Show;
 					PRINT_DEEMP_0;
 					break;
-				/* Press "5" : Set Deemphasis_Level as 0 / Deemphasis_Level_1 as 0 */
-				case '5':
+				/* Press "4" : Set Deemphasis_Level as 0 / Deemphasis_Level_1 as 0 */
+				case '4':
 					Deemphasis_Level	= DP_DEEMP_0;
 					Deemphasis_Level_1	= DP_DEEMP_0;
 					Deemphasis_Show	= DP_DEEMP_1;
 					Deemphasis_RD		= Deemphasis_Show;
 					PRINT_DEEMP_1;
 					break;
-				/* Press "6" : Set Deemphasis_Level as 2 / Deemphasis_Level_1 as 1 */
-				case '6':
+				/* Press "5" : Set Deemphasis_Level as 2 / Deemphasis_Level_1 as 1 */
+				case '5':
 					Deemphasis_Level	= DP_DEEMP_2;
 					Deemphasis_Level_1	= DP_DEEMP_1;
 					Deemphasis_Show	= DP_DEEMP_2;
 					Deemphasis_RD		= Deemphasis_Show;
 					PRINT_DEEMP_2;
-					break;
-				/* Press "7" : Set Swing as 0 */
-				case '7':
-					Swing_Level			=  0;
-					PRINT_SWING_0;
-					break;
-				/* Press "8" : Set Swing as 1 */
-				case '8':
-					Swing_Level			=  1;
-					PRINT_SWING_1;
-					break;
-				/* Press "9" : Set Swing as 2 */
-				case '9':
-					Swing_Level			=  2;
-					PRINT_SWING_2;
 					break;
 #endif
 				default:
@@ -233,7 +218,8 @@ do_ast_dptest(cmd_tbl_t *cmdtp, int flags, int argc, char *const argv[])
 				if (execute_test) {
 					printf("Apply SSCG into current measurement !\n\n");
 					TX_SSCG_Cfg = DP_TX_RDY_TEST;
-					TX_SSCG_Cfg |= SSCG;
+					/* TX_SSCG_Cfg |= SSCG; */
+					TX_SSCG_Cfg |= DP_SSCG_ON;
 					writel(TX_SSCG_Cfg, DP_TX_PHY_SET);
 				}
 			} else {
@@ -267,41 +253,37 @@ do_ast_dptest(cmd_tbl_t *cmdtp, int flags, int argc, char *const argv[])
 					flag = (F_EMPHASIS_1 | F_PAT_PRBS7);
 					break;
 
-				case 'c': /* Eye Diagram Test w/t w/o Cable - HBR2CPAT */
-					flag = (F_EMPHASIS_1 | F_PAT_HBR2CPAT);
-					break;
-
-				case 'd':
+				case 'c':
 					flag = (F_EMPHASIS_1 | F_PAT_PLTPAT);
 					break;
 
-				case 'e': /* Non-Transition Voltage Range Measurement - PLTPAT */
+				case 'd': /* Non-Transition Voltage Range Measurement - PLTPAT */
 					flag = (F_EMPHASIS | F_PAT_PLTPAT);
 					break;
 
-				case 'f': /* Pre-Emphasis Level Test and Pre-Emphasis Level Delta Test- PRBS7 */
+				case 'e': /* Pre-Emphasis Level Test and Pre-Emphasis Level Delta Test- PRBS7 */
 					flag = (F_EMPHASIS_1 | F_PAT_PRBS7);
 					break;
 
-				case 'g': /* Non-Transition Voltage Range Measurement - PRBS7 */
+				case 'f': /* Non-Transition Voltage Range Measurement - PRBS7 */
 					flag = (F_EMPHASIS | F_PAT_PRBS7);
 					break;
 
-				case 'h': /* Total - PRBS7 */
+				case 'g': /* Total - PRBS7 */
 					flag = (F_EMPHASIS_1 | F_PAT_D10_2);
 					break;
 
-				case 'i':
+				case 'h':
 					printf("Change the Swing value from request\n");
 					flag = (F_EMPHASIS_1 | F_PAT_PRBS7 | F_SHOW_SWING);
 					break;
 
-				case 'j':
+				case 'i':
 					printf("Change the Swing value from request\n");
 					flag = (F_EMPHASIS_1 | F_PAT_PLTPAT | DP_TX_HIGH_SPEED | F_SHOW_SWING);
 					break;
 
-				case 'k':
+				case 'j':
 					flag = F_PAT_AUX;
 					break;
 #endif
@@ -1223,6 +1205,16 @@ void Apply_Main_Mesument(int flag)
 	else if (flag & F_PAT_D10_2)
 		Set_D10_1();
 
+	/* ssc special patch */
+	if (flag & F_PAT_D10_2) {
+		/*Apply special patch*/
+		writel(0x00000400, DP_TX_RES_CFG);
+		TX_SSCG_Cfg |= DP_SSCG_ON;
+	} else {
+		/*Recover into original setting*/
+		writel(0x00000000, DP_TX_RES_CFG);
+	}
+
 	writel(TX_SSCG_Cfg, DP_TX_PHY_SET);
 }
 
@@ -1422,11 +1414,11 @@ char DPPHYTX_Show_Cfg(void)
 
 	switch (SSCG) {
 	case DP_SSCG_ON:
-		PRINT_SSCG_ON;
+		/*PRINT_SSCG_ON;*/
 		break;
 
 	case DP_SSCG_OFF:
-		PRINT_SSCG_OFF;
+		/*PRINT_SSCG_OFF;*/
 		break;
 
 	default:
@@ -1435,7 +1427,8 @@ char DPPHYTX_Show_Cfg(void)
 		SetFail = 1;
 		break;
 	}
-	TX_SSCG_Cfg |= SSCG;
+	/* TX_SSCG_Cfg |= SSCG; */
+	TX_SSCG_Cfg |= DP_SSCG_ON;
 
 	printf("\n");
 
@@ -1483,10 +1476,6 @@ void DPPHYTX_Show_Item(char received)
 
 	case 'j':
 		PRINT_ITEM_J;
-		break;
-
-	case 'k':
-		PRINT_ITEM_K;
 		break;
 
 	case 'x':

@@ -183,23 +183,16 @@
 
 #define PRINT_ITEM_B		printf("3.3 Peak to Peak Voltage Test - PRBS7\n")
 
-#define PRINT_ITEM_C		printf("3.1 Eye Diagram Test with No Cable Mode - HBR2CPAT\n");\
-				printf("3.1 Eye Diagram Test - HBR2CPAT\n");\
-				printf("3.12 Total Jitter Test with No Cable Model -HBR2CPAT\n");\
-				printf("3.12 Total Jitter Test -HBR2CPAT\n");\
-				printf("3.12 Deterministic Jitter Test with No Cable Model -HBR2CPAT\n");\
-				printf("3.12 Deterministic Jitter Test -HBR2CPAT\n")\
-
-#define PRINT_ITEM_D		printf("3.3 Peak to Peak Voltage Test -PLTPAT\n");\
+#define PRINT_ITEM_C		printf("3.3 Peak to Peak Voltage Test -PLTPAT\n");\
 				printf("3.3 Pre-Emphasis Level Test and Pre-Emphasis Level Delta Test -PLTPAT\n")\
 
-#define PRINT_ITEM_E		printf("3.3  Non-Transition Voltage Range Measurement -PLTPAT\n")
+#define PRINT_ITEM_D		printf("3.3  Non-Transition Voltage Range Measurement -PLTPAT\n")
 
-#define PRINT_ITEM_F		printf("3.3 Pre-Emphasis Level Test and Pre-Emphasis Level Delta Test -PRBS7\n")
+#define PRINT_ITEM_E		printf("3.3 Pre-Emphasis Level Test and Pre-Emphasis Level Delta Test -PRBS7\n")
 
-#define PRINT_ITEM_G		printf("3.3 Non-Transition Voltage Range Measurement - PRBS7\n")
+#define PRINT_ITEM_F		printf("3.3 Non-Transition Voltage Range Measurement - PRBS7\n")
 
-#define PRINT_ITEM_H		printf("3.12 Total Jitter Test with No Cable Model -D10.2\n");\
+#define PRINT_ITEM_G		printf("3.12 Total Jitter Test with No Cable Model -D10.2\n");\
 				printf("3.12 Total Jitter Test -D10.2\n");\
 				printf("3.12 Deterministic Jitter Test with No Cable Model -D10.2\n");\
 				printf("3.12 Deterministic Jitter Test -D10.2\n");\
@@ -209,11 +202,18 @@
 				printf("3.15 SSC Modulation Frequency Test -D10.2\n");\
 				printf("3.16 SSC Modulation Deviation Test -D10.2\n")\
 
-#define PRINT_ITEM_I		printf("3.2 Non Pre-Emphasis Level Test - PRBS7\n")
+#define PRINT_ITEM_H		printf("3.2 Non Pre-Emphasis Level Test - PRBS7\n")
 
-#define PRINT_ITEM_J		printf("3.2 Non Pre-Emphasis Level Test - PLTPAT\n")
+#define PRINT_ITEM_I		printf("3.2 Non Pre-Emphasis Level Test - PLTPAT\n")
 
-#define PRINT_ITEM_K		printf("8.1 AUX Channel Measurement\n")
+#define PRINT_ITEM_J		printf("8.1 AUX Channel Measurement\n")
+
+#define PRINT_ITEM_K		printf("3.1 Eye Diagram Test with No Cable Mode - HBR2CPAT\n");\
+				printf("3.1 Eye Diagram Test - HBR2CPAT\n");\
+				printf("3.12 Total Jitter Test with No Cable Model -HBR2CPAT\n");\
+				printf("3.12 Total Jitter Test -HBR2CPAT\n");\
+				printf("3.12 Deterministic Jitter Test with No Cable Model -HBR2CPAT\n");\
+				printf("3.12 Deterministic Jitter Test -HBR2CPAT\n")\
 
 #define PRINT_ITEM_X		printf("Auto DP Measurement\n")
 
