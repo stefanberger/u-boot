@@ -430,6 +430,8 @@ static int pcie_aspeed_probe(struct udevice *dev)
 			return ret;
 		}
 		aspeed_pcie_rc_slot_enable(pcie, 0);
+		reset_deassert(&rc0_reset_ctl);
+		mdelay(50);
 		if (uclass_get_device_by_of_offset
 				(UCLASS_MISC, slot0_of_handle, &slot0_dev))
 			goto slot1;
@@ -447,13 +449,14 @@ slot1:
 			return ret;
 		}
 		aspeed_pcie_rc_slot_enable(pcie, 1);
+		reset_deassert(&rc1_reset_ctl);
+		mdelay(50);
 		if (uclass_get_device_by_of_offset
 				(UCLASS_MISC, slot1_of_handle, &slot1_dev))
 			goto end;
 		if (aspeed_pcie_phy_link_status(slot1_dev))
 			aspeed_pcie_set_slot_power_limit(pcie, 1);
 	}
-	mdelay(100);
 end:
 	return 0;
 }
