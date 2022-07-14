@@ -60,7 +60,8 @@ static int aspeed_i2c_global_probe(struct udevice *dev)
 
 	reset_deassert(&i2c_global->reset);
 
-	if (i2c_global->version == AST2600_I2C_GLOBAL) {
+	if (IS_ENABLED(SYS_I2C_AST2600) &&
+	    i2c_global->version == AST2600_I2C_GLOBAL) {
 		writel(AST2600_GLOBAL_INIT, i2c_global->regs +
 			AST2600_I2CG_CTRL);
 		writel(I2CCG_DIV_CTRL, i2c_global->regs +
