@@ -2642,9 +2642,9 @@ static int otp_verify_boot_image(phys_addr_t addr)
 	int i;
 	int pass = 0;
 
-	ret = uclass_get_device_by_driver(UCLASS_MOD_EXP, DM_GET_DRIVER(aspeed_acry), &mod_exp_dev);
+	ret = uclass_get_device(UCLASS_MOD_EXP, 0, &mod_exp_dev);
 	if (ret) {
-		printf("RSA engine: Can't find aspeed_acry\n");
+		printf("RSA: Can't find RSA driver\n");
 		return OTP_FAILURE;
 	}
 
