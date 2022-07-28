@@ -16,7 +16,6 @@
 	num-cs = <1>;
 
 	flash@0 {
-		compatible = "spi-flash", "sst,w25q256";
 		status = "okay";
 		spi-max-frequency = <50000000>;
 		spi-tx-bus-width = <4>;
@@ -42,7 +41,6 @@
 	timing-calibration-disabled;
 
 	flash@0 {
-		compatible = "spi-flash", "sst,w25q256";
 		status = "okay";
 		spi-max-frequency = <25000000>;
 		spi-tx-bus-width = <4>;
@@ -50,7 +48,6 @@
 	};
 
 	flash@1 {
-		compatible = "spi-flash", "sst,w25q256";
 		status = "okay";
 		spi-max-frequency = <25000000>;
 		spi-tx-bus-width = <4>;

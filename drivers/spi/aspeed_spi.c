@@ -1252,7 +1252,8 @@ static int aspeed_spi_count_flash_devices(struct udevice *bus)
 
 	dev_for_each_subnode(node, bus) {
 		if (ofnode_is_available(node) &&
-		    ofnode_device_is_compatible(node, "spi-flash"))
+		    (ofnode_device_is_compatible(node, "spi-flash") ||
+		     ofnode_device_is_compatible(node, "jedec,spi-nor")))
 			count++;
 	}
 
