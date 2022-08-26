@@ -62,6 +62,9 @@
 #define AST_GPIO_BASE		(0x1E780000)
 #define AST_GPIOYZ_DATA_VALUE	(AST_GPIO_BASE + 0x1E0)
 
+#define AST_SEC_BASE		(0x1E6F2000)
+#define AST_SEC_VAULT_KEY_CTRL	(AST_SEC_BASE + 0x80C)
+
 /* Revision ID */
 #define REV_ID_AST2600A0	0x05000303
 #define REV_ID_AST2600A1	0x05010303
@@ -239,6 +242,11 @@ wait_lock:
 	str	r1, [r0]
 
 2:
+	/* Enable Vault Key Write Protection */
+	mov	r0, #0x2
+	ldr	r1, =AST_SEC_VAULT_KEY_CTRL
+	str	r0, [r1]
+
 	/* PCIeRC/E2M8 power-on reset comes from SCU040
 	It need set SCU040[18] high to reset PCIeRC/E2M
 	when AC power-on */
