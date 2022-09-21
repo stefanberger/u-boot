@@ -2,6 +2,21 @@
 #define DDR_PHY_TBL_END                 0xaeededed
 
 /**
+ * phyr030[18:16] - Ron PU (PHY side)
+ * phyr030[14:12] - Ron PD (PHY side)
+ *   b'000 : disable
+ *   b'001 : 240 ohm
+ *   b'010 : 120 ohm
+ *   b'011 : 80 ohm
+ *   b'100 : 60 ohm
+ *   b'101 : 48 ohm
+ *   b'110 : 40 ohm
+ *   b'111 : 34 ohm
+ *
+ */
+#define PHY_RON				((0x7 << 16) | (0x7 << 12))
+
+/**
  * phyr030[10:8] - ODT configuration (PHY side)
  *   b'000 : ODT disabled
  *   b'100 : 60 ohm
@@ -45,7 +60,7 @@ u32 ast2600_sdramphy_config[165] = {
 	0x20000000,	// phyr024
 	0x00000008,	// phyr028
 	0x00000000,	// phyr02c
-	(0x00077000 | PHY_ODT),	// phyr030
+	(PHY_RON | PHY_ODT),	/* phyr030 */
 	0x00000000,	// phyr034
 	0x00000000,	// phyr038
 	0x20000000,	// phyr03c
@@ -213,7 +228,7 @@ u32 ast2600_sdramphy_config[165] = {
 	0x20000000,	// phyr024
 	0x00000008,	// phyr028
 	0x00000000,	// phyr02c
-	(0x00077000 | PHY_ODT),	// phyr030
+	(PHY_RON | PHY_ODT),	/* phyr030 */
 	0x00000000,	// phyr034
 	0x00000000,	// phyr038
 	0x20000000,	// phyr03c
