@@ -68,6 +68,12 @@ choice
 	prompt "DDR4 PHY side ODT"
 	default ASPEED_DDR4_PHY_ODT40
 
+config ASPEED_DDR4_PHY_ODT80
+	bool "DDR4 PHY side ODT 80 ohm"
+	depends on DM && OF_CONTROL && ARCH_ASPEED
+	help
+	  select DDR4 PHY side ODT 80 ohm
+
 config ASPEED_DDR4_PHY_ODT60
 	bool "DDR4 PHY side ODT 60 ohm"
 	depends on DM && OF_CONTROL && ARCH_ASPEED
