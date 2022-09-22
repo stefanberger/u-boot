@@ -116,10 +116,11 @@
 #define SEARCH_RDWIN_PTRN_SUM   0xbcf02355
 #else
 /* mode register setting for real chip are derived from the model GDDR4-1600 */
-#define DDR4_MR01_MODE		(MR01_DRAM_ODT | 0x00010510)
-#define DDR4_MR23_MODE		0x00000000
-#define DDR4_MR45_MODE		0x04000000
-#define DDR4_MR6_MODE           0x00000400
+#define DDR4_MR01_MODE		((MR1_VAL << 16) | MR0_VAL)
+#define DDR4_MR23_MODE		((MR3_VAL << 16) | MR2_VAL)
+#define DDR4_MR45_MODE		((MR5_VAL << 16) | MR4_VAL)
+#define DDR4_MR6_MODE		MR6_VAL
+
 #define DDR4_TRFC_1600		0x467299f1
 #define DDR4_TRFC_1333		0x3a5f80c9
 #define DDR4_TRFC_800		0x23394c78
