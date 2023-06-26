@@ -1,12 +1,13 @@
+// SPDX-License-Identifier: GPL-2.0+
 /dts-v1/;
 
 #include "ast2400-u-boot.dtsi"
 
 / {
-	model = "AST2400 EVB";
-	compatible = "aspeed,ast2400-evb", "aspeed,ast2400";
+	model = "Palmetto BMC";
+	compatible = "tyan,palmetto-bmc", "aspeed,ast2400";
 
-	memory {
+	memory@40000000 {
 		device_type = "memory";
 		reg = <0x40000000 0x10000000>;
 	};
@@ -18,8 +19,6 @@
 	aliases {
 		spi0 = &fmc;
 		spi1 = &spi1;
-		ethernet0 = &mac0;
-		ethernet1 = &mac1;
 	};
 };
 
@@ -44,17 +43,11 @@
 
 &mac0 {
 	status = "okay";
-	phy-mode = "rgmii";
 
+	phy-mode = "NC-SI";
+	use-ncsi;
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_mac1link_default &pinctrl_mdio1_default>;
-};
-
-&mac1 {
-	status = "okay";
-	phy-mode = "rgmii";
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_mac2link_default &pinctrl_mdio2_default>;
+	pinctrl-0 = <&pinctrl_rmii1_default>;
 };
 
 &fmc {
@@ -65,13 +58,6 @@
 		spi-tx-bus-width = <2>;
 		spi-rx-bus-width = <2>;
 	};
-
-	flash@1 {
-                status = "okay";
-                spi-max-frequency = <50000000>;
-                spi-tx-bus-width = <2>;
-                spi-rx-bus-width = <2>;
-        };
 };
 
 &spi1 {
@@ -84,13 +70,4 @@
 		spi-tx-bus-width = <2>;
 		spi-rx-bus-width = <2>;
 	};
-	flash@1 {
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_spi1_default &pinctrl_spi1cs1_default>;
-		status = "okay";
-		spi-max-frequency = <50000000>;
-		spi-tx-bus-width = <2>;
-		spi-rx-bus-width = <2>;
-	};
 };
-
